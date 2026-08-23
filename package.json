@@ -7,6 +7,7 @@
     "dev": "pnpm --filter @repo/web dev",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check ."
