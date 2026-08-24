@@ -15,6 +15,7 @@ apps/
 ### apps/web
 
 - [Vite](https://vite.dev/) + [React](https://react.dev/) + TypeScript
+- ルーティング: [TanStack Router](https://tanstack.com/router)（`@tanstack/router-plugin` によるファイルベースルーティング、`src/routes/` 配下から `routeTree.gen.ts` を自動生成）
 - スタイリング: [Tailwind CSS](https://tailwindcss.com/)
 - UIコンポーネント: [shadcn/ui](https://ui.shadcn.com/)（[base-ui](https://base-ui.com/) ベース）
 - テスト: [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/) + jsdom
