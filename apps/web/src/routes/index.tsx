@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/ui/button";
 
-export function App() {
+export const Route = createFileRoute("/")({
+  component: Home,
+});
+
+function Home() {
   const [count, setCount] = useState(0);
 
   return (

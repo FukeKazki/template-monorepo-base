@@ -15,3 +15,6 @@ pnpm-debug.log*
 
 *storybook.log
 storybook-static
+
+.tanstack
+routeTree.gen.ts
