@@ -6,7 +6,7 @@ type GreetingCardProps = {
 export function GreetingCard({ name, message = "ようこそ！" }: GreetingCardProps) {
   return (
     <section>
-      <h2>こんにちは、{name} さん</h2>
+      <h2 className="text-amber-400">こんにちは、{name} さん</h2>
       <p>{message}</p>
     </section>
   );
