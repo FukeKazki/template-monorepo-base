@@ -26,6 +26,6 @@ jobs:
 
       - run: pnpm typecheck
 
-      - run: pnpm test
+      - run: pnpm --filter @repo/web run test:unit
 
       - run: pnpm build

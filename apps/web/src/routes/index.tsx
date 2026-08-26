@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/ui/button";
+import { ProductListTable } from "@/features/product-management/components/product-list-table";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -18,6 +19,8 @@ function Home() {
       >
         count is {count}
       </Button>
+
+      <ProductListTable />
     </main>
   );
 }

@@ -1,0 +1,25 @@
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/open-api/client";
+import { constructProductList } from "../read-model/product-list";
+
+export const useProductList = () => {
+  const data = useQuery({
+    queryKey: ["productList"],
+    queryFn: async () => {
+      const { data, error } = await apiClient.GET("/products");
+      if (error) {
+        throw new Error("Failed to fetch product list");
+      }
+      return data;
+    },
+  });
+
+  if (!data.data) {
+    return [];
+  }
+
+  return constructProductList(data.data).match({
+    ok: (productList) => productList,
+    err: () => [],
+  });
+};
