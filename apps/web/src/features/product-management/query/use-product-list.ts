@@ -1,25 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
+import { TaggedError } from "better-result";
 import { apiClient } from "@/lib/open-api/client";
 import { constructProductList } from "../read-model/product-list";
 
-export const useProductList = () => {
-  const data = useQuery({
-    queryKey: ["productList"],
-    queryFn: async () => {
-      const { data, error } = await apiClient.GET("/products");
-      if (error) {
-        throw new Error("Failed to fetch product list");
-      }
-      return data;
-    },
-  });
+export class FetchProductListError extends TaggedError("FetchProductListError")<{
+  cause?: unknown;
+}> {}
 
-  if (!data.data) {
-    return [];
+const fetchProductList = async () => {
+  const { data, error } = await apiClient.GET("/products");
+  if (error) {
+    throw new FetchProductListError({ cause: error });
   }
+  return data;
+};
 
-  return constructProductList(data.data).match({
-    ok: (productList) => productList,
-    err: () => [],
+export const useProductList = () => {
+  const {
+    data,
+    error,
+    isPending,
+    refetch: refetchProductList,
+  } = useQuery<Awaited<ReturnType<typeof fetchProductList>>, FetchProductListError>({
+    queryKey: ["productList"],
+    queryFn: fetchProductList,
   });
+
+  return {
+    productList: data ? constructProductList(data) : [],
+    error,
+    isPending,
+    refetchProductList,
+  };
 };

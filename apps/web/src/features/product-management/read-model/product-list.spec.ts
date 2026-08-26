@@ -1,6 +1,5 @@
-import { Result } from "better-result";
-import { describe, expect, it } from "vitest";
-import { constructProductList, InvalidProductListError } from "./product-list";
+import { describe, expect, it, vi } from "vitest";
+import { constructProductList } from "./product-list";
 
 describe("product-list", () => {
   it("【正常系】初期化できる", () => {
@@ -11,8 +10,7 @@ describe("product-list", () => {
 
     const result = constructProductList(data);
 
-    expect(Result.isOk(result)).toBe(true);
-    expect(result.unwrap()).toEqual([
+    expect(result).toEqual([
       {
         name: "Product A",
         price: 1000,
@@ -28,14 +26,24 @@ describe("product-list", () => {
     ]);
   });
 
-  it("【異常系】不正なデータの場合はErrになる", () => {
-    const data = [{ name: "", price: 1000, imageUrl: "https://example.com/product-a.jpg" }];
+  it("【異常系】不正なデータが含まれる場合はその要素だけ除外される", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const data = [
+      { name: "Product A", price: 1000, imageUrl: "https://example.com/product-a.jpg" },
+      { name: "", price: 2000, imageUrl: "https://example.com/product-b.jpg" },
+    ];
 
     const result = constructProductList(data);
 
-    expect(Result.isError(result)).toBe(true);
-    if (Result.isError(result)) {
-      expect(result.error).toBeInstanceOf(InvalidProductListError);
-    }
+    expect(result).toEqual([
+      {
+        name: "Product A",
+        price: 1000,
+        imageUrl: "https://example.com/product-a.jpg",
+        formattedPrice: "￥1,000",
+      },
+    ]);
+    expect(consoleErrorSpy).toHaveBeenCalledOnce();
+    consoleErrorSpy.mockRestore();
   });
 });
