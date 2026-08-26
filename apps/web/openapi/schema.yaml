@@ -56,6 +56,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    put:
+      operationId: updateProduct
+      summary: 商品を更新する
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductRequest"
+      responses:
+        "200":
+          description: 更新した商品
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: 商品が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Product:
@@ -79,6 +108,22 @@ components:
           format: uri
           minLength: 1
     CreateProductRequest:
+      type: object
+      required:
+        - name
+        - price
+        - imageUrl
+      properties:
+        name:
+          type: string
+          minLength: 1
+        price:
+          type: number
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+    UpdateProductRequest:
       type: object
       required:
         - name

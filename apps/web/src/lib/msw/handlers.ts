@@ -32,4 +32,12 @@ export const handlers = [
     }
     return response(200).json(product);
   }),
+  http.put("/products/{id}", async ({ params, request, response }) => {
+    const product = defaultProducts.find((product) => product.id === params.id);
+    if (!product) {
+      return response(404).json({ message: "商品が見つかりません" });
+    }
+    const body = await request.json();
+    return response(200).json({ id: product.id, ...body });
+  }),
 ];

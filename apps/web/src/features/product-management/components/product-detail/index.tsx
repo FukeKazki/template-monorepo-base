@@ -47,6 +47,15 @@ export const ProductDetail = ({ productId }: ProductDetailProps) => {
 
       <h1 className="text-2xl font-bold">{productDetail.name}</h1>
       <p className="text-muted-foreground text-lg">{productDetail.formattedPrice}</p>
+
+      <Button
+        variant="outline"
+        className="self-start"
+        nativeButton={false}
+        render={<Link to="/products/$productId/edit" params={{ productId }} />}
+      >
+        編集する
+      </Button>
     </div>
   );
 };
