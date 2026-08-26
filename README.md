@@ -1,4 +1,4 @@
-# template-monorepo-base
+# template-monorepo-react
 
 pnpm workspaces によるモノレポの最小構成テンプレート。
 
