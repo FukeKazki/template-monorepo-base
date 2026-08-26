@@ -24,7 +24,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Product"
+              $ref: "#/components/schemas/CreateProductRequest"
       responses:
         "201":
           description: 登録した商品
@@ -32,9 +32,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Product"
+  /products/{id}:
+    get:
+      operationId: getProduct
+      summary: 商品詳細を取得する
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: 商品詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: 商品が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - imageUrl
+      properties:
+        id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        price:
+          type: number
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+    CreateProductRequest:
       type: object
       required:
         - name
@@ -50,3 +94,10 @@ components:
           type: string
           format: uri
           minLength: 1
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string

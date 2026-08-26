@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ProductListItem } from "../../read-model/product-list";
 
@@ -20,5 +21,18 @@ export const columns: ColumnDef<ProductListItem>[] = [
   {
     accessorKey: "formattedPrice",
     header: "価格",
+  },
+  {
+    id: "actions",
+    header: "詳細",
+    cell: ({ row }) => (
+      <Link
+        to="/products/$productId"
+        params={{ productId: row.original.id }}
+        className="text-primary underline-offset-4 hover:underline"
+      >
+        詳細を見る
+      </Link>
+    ),
   },
 ];
