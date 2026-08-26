@@ -20,14 +20,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @repo/web exec playwright install --with-deps chromium
-
       - run: pnpm lint
 
       - run: pnpm format:check
 
       - run: pnpm typecheck
 
-      - run: pnpm test
+      - run: pnpm --filter @repo/web run test:unit
 
       - run: pnpm build

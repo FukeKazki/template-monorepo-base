@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "pnpm codegen && tsc -b --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run --project unit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
