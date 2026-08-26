@@ -1,0 +1,15 @@
+name: template-monorepo-base
+version: 1.0.0
+description: APM project for template-monorepo-base
+author: FukeKazki
+# Which agent platforms to deploy to.
+# Resolution order: --target flag > this field > auto-detect from filesystem.
+# Accepted values: agent-skills, antigravity, claude, codex, copilot, cursor, gemini, grok-build, kiro, opencode, windsurf
+targets:
+  - claude
+dependencies:
+  apm:
+    - vercel-labs/agent-skills/skills/react-best-practices
+  mcp: []
+includes: auto
+scripts: {}

@@ -19,3 +19,7 @@ storybook-static
 .tanstack
 routeTree.gen.ts
 schema.gen.ts
+
+
+# APM dependencies
+apm_modules/
