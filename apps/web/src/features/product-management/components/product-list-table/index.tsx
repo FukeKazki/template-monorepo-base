@@ -1,17 +1,9 @@
+import { DataTable } from "@/ui/data-table";
 import { useProductList } from "../../query/use-product-list";
+import { columns } from "./columns";
 
 export const ProductListTable = () => {
   const productList = useProductList();
 
-  return (
-    <ul>
-      {productList.map((product) => (
-        <li key={product.name}>
-          <div>{product.name}</div>
-          <div>{product.formattedPrice}</div>
-          <div>{product.imageUrl}</div>
-        </li>
-      ))}
-    </ul>
-  );
+  return <DataTable columns={columns} data={productList} />;
 };
