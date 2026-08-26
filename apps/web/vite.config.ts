@@ -9,6 +9,14 @@ export default defineConfig({
     tanstackRouter({ target: "react", autoCodeSplitting: true, routesDirectory: "./src/routes" }),
     react(),
     tailwindcss(),
+    {
+      name: "dev-entry",
+      apply: "serve",
+      transformIndexHtml: (html) =>
+        process.env["USE_MOCK"] === "false"
+          ? html
+          : html.replace("/src/main.tsx", "/src/dev-entry.ts"),
+    },
   ],
   resolve: {
     alias: {
