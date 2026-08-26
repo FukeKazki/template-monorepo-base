@@ -15,4 +15,8 @@ export const defaultProducts = [
 
 export const handlers = [
   http.get("/products", ({ response }) => response(200).json(defaultProducts)),
+  http.post("/products", async ({ request, response }) => {
+    const body = await request.json();
+    return response(201).json(body);
+  }),
 ];
