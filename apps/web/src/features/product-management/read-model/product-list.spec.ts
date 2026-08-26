@@ -1,5 +1,6 @@
+import { Result } from "better-result";
 import { describe, expect, it } from "vitest";
-import { constructProductList } from "./product-list";
+import { constructProductList, InvalidProductListError } from "./product-list";
 
 describe("product-list", () => {
   it("【正常系】初期化できる", () => {
@@ -8,7 +9,10 @@ describe("product-list", () => {
       { name: "Product B", price: 2000, imageUrl: "https://example.com/product-b.jpg" },
     ];
 
-    expect(constructProductList(data)).toEqual([
+    const result = constructProductList(data);
+
+    expect(Result.isOk(result)).toBe(true);
+    expect(result.unwrap()).toEqual([
       {
         name: "Product A",
         price: 1000,
@@ -22,5 +26,16 @@ describe("product-list", () => {
         formattedPrice: "￥2,000",
       },
     ]);
+  });
+
+  it("【異常系】不正なデータの場合はErrになる", () => {
+    const data = [{ name: "", price: 1000, imageUrl: "https://example.com/product-a.jpg" }];
+
+    const result = constructProductList(data);
+
+    expect(Result.isError(result)).toBe(true);
+    if (Result.isError(result)) {
+      expect(result.error).toBeInstanceOf(InvalidProductListError);
+    }
   });
 });

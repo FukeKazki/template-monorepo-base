@@ -18,6 +18,8 @@ export const useProductList = () => {
     return [];
   }
 
-  const productList = constructProductList(data.data);
-  return productList;
+  return constructProductList(data.data).match({
+    ok: (productList) => productList,
+    err: () => [],
+  });
 };

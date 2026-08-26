@@ -1,3 +1,4 @@
+import { Result, TaggedError, type Result as ResultType } from "better-result";
 import * as v from "valibot";
 
 const priceFormatter = new Intl.NumberFormat("ja-JP", {
@@ -23,13 +24,17 @@ export const ProductListSchema = v.array(ProductListItemSchema);
 
 export type ProductList = v.InferOutput<typeof ProductListSchema>;
 
+export class InvalidProductListError extends TaggedError("InvalidProductListError")<{
+  issues: v.BaseIssue<unknown>[];
+}> {}
+
 export const constructProductList = (
   data: { name: string; price: number; imageUrl: string }[],
-): ProductList => {
+): ResultType<ProductList, InvalidProductListError> => {
   const result = v.safeParse(ProductListSchema, data);
 
   if (!result.success) {
-    throw new Error("Invalid product list data");
+    return Result.err(new InvalidProductListError({ issues: result.issues }));
   }
-  return result.output;
+  return Result.ok(result.output);
 };
