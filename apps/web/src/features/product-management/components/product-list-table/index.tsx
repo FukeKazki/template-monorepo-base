@@ -8,7 +8,7 @@ export const ProductListTable = () => {
       {productList.map((product) => (
         <li key={product.name}>
           <div>{product.name}</div>
-          <div>{product.price}</div>
+          <div>{product.formattedPrice}</div>
           <div>{product.imageUrl}</div>
         </li>
       ))}
