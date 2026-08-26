@@ -16,6 +16,22 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      summary: 商品を登録する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        "201":
+          description: 登録した商品
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
 components:
   schemas:
     Product:
