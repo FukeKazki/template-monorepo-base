@@ -23,3 +23,5 @@ schema.gen.ts
 
 # APM dependencies
 apm_modules/
+
+.playwright-mcp/
