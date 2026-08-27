@@ -1,5 +1,16 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/ui/alert-dialog";
 import { Button } from "@/ui/button";
+import { useDeleteProduct } from "../../mutation/use-delete-product";
 import { ProductNotFoundError, useProductDetail } from "../../query/use-product-detail";
 
 type ProductDetailProps = {
@@ -8,6 +19,17 @@ type ProductDetailProps = {
 
 export const ProductDetail = ({ productId }: ProductDetailProps) => {
   const { productDetail, error, isPending, refetchProductDetail } = useProductDetail(productId);
+  const { deleteProduct, isDeletingProduct, error: deleteError } = useDeleteProduct();
+  const navigate = useNavigate();
+
+  const onDelete = async () => {
+    try {
+      await deleteProduct({ id: productId });
+      await navigate({ to: "/" });
+    } catch {
+      // 削除エラーは useDeleteProduct が返す error で表示するため、ここでは握りつぶす
+    }
+  };
 
   if (isPending) {
     return <p className="text-muted-foreground p-4 text-sm">読み込み中...</p>;
@@ -48,14 +70,50 @@ export const ProductDetail = ({ productId }: ProductDetailProps) => {
       <h1 className="text-2xl font-bold">{productDetail.name}</h1>
       <p className="text-muted-foreground text-lg">{productDetail.formattedPrice}</p>
 
-      <Button
-        variant="outline"
-        className="self-start"
-        nativeButton={false}
-        render={<Link to="/products/$productId/edit" params={{ productId }} />}
-      >
-        編集する
-      </Button>
+      {deleteError && (
+        <div role="alert" className="flex flex-col items-start gap-1">
+          <p className="text-destructive">商品の削除に失敗しました。</p>
+          <p className="text-muted-foreground text-sm">{deleteError.message}</p>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/products/$productId/edit" params={{ productId }} />}
+        >
+          編集する
+        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button variant="destructive" disabled={isDeletingProduct}>
+                {isDeletingProduct ? "削除中..." : "削除する"}
+              </Button>
+            }
+          />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>商品を削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                「{productDetail.name}」を削除します。この操作は取り消せません。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogClose render={<Button variant="outline" />}>キャンセル</AlertDialogClose>
+              <AlertDialogClose
+                render={
+                  <Button variant="destructive" onClick={onDelete} disabled={isDeletingProduct} />
+                }
+              >
+                削除する
+              </AlertDialogClose>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 };

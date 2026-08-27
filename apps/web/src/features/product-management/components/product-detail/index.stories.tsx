@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { delay, http as rawHttp, HttpResponse } from "msw";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { defaultProducts, http } from "@/lib/msw/handlers";
 import { ProductDetail } from "./index";
 
@@ -64,5 +64,44 @@ export const FetchError: Story = {
     const canvas = within(canvasElement);
 
     await expect(canvas.findByText("商品詳細の取得に失敗しました。")).resolves.toBeInTheDocument();
+  },
+};
+
+export const Delete: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(canvas.findByText(defaultProducts[0]!.name)).resolves.toBeInTheDocument();
+
+    await userEvent.click(canvas.getByRole("button", { name: "削除する" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await expect(within(dialog).findByText("商品を削除しますか？")).resolves.toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "削除する" }));
+
+    await expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  },
+};
+
+export const DeleteError: Story = {
+  beforeEach({ msw }) {
+    msw.use(
+      rawHttp.delete("/api/products/:id", () =>
+        HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
+      ),
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(canvas.findByText(defaultProducts[0]!.name)).resolves.toBeInTheDocument();
+
+    await userEvent.click(canvas.getByRole("button", { name: "削除する" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "削除する" }));
+
+    await expect(canvas.findByText("商品の削除に失敗しました。")).resolves.toBeInTheDocument();
   },
 };

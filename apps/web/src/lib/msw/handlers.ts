@@ -40,4 +40,11 @@ export const handlers = [
     const body = await request.json();
     return response(200).json({ id: product.id, ...body });
   }),
+  http.delete("/products/{id}", ({ params, response }) => {
+    const product = defaultProducts.find((product) => product.id === params.id);
+    if (!product) {
+      return response(404).json({ message: "商品が見つかりません" });
+    }
+    return response(204).empty();
+  }),
 ];
