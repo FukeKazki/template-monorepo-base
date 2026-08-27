@@ -8,6 +8,7 @@ const priceFormatter = new Intl.NumberFormat("ja-JP", {
 
 export const ProductListItemSchema = v.pipe(
   v.object({
+    id: v.pipe(v.string(), v.nonEmpty()),
     name: v.pipe(v.string(), v.nonEmpty()),
     price: v.number(),
     imageUrl: v.pipe(v.string(), v.nonEmpty(), v.url()),
@@ -29,7 +30,7 @@ export class InvalidProductListItemError extends TaggedError("InvalidProductList
 }> {}
 
 export const constructProductList = (
-  data: { name: string; price: number; imageUrl: string }[],
+  data: { id: string; name: string; price: number; imageUrl: string }[],
 ): ProductList => {
   return data
     .map((item) => v.safeParse(ProductListItemSchema, item))

@@ -7,7 +7,8 @@ export class CreateProductError extends TaggedError("CreateProductError")<{
   cause?: unknown;
 }> {}
 
-type CreateProductInput = components["schemas"]["Product"];
+type CreateProductInput = components["schemas"]["CreateProductRequest"];
+type CreateProductOutput = components["schemas"]["Product"];
 
 const postProduct = async (input: CreateProductInput) => {
   const { data, error } = await apiClient.POST("/products", { body: input });
@@ -23,7 +24,7 @@ export const useCreateProduct = () => {
     mutateAsync: createProduct,
     isPending: isCreatingProduct,
     error,
-  } = useMutation<CreateProductInput, CreateProductError, CreateProductInput>({
+  } = useMutation<CreateProductOutput, CreateProductError, CreateProductInput>({
     mutationFn: postProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productList"] });

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-26T06:39:34.275730+00:00'
+generated_at: '2026-08-27T01:20:01.038792+00:00'
 apm_version: 0.28.0
 dependencies:
 - repo_url: vercel-labs/agent-skills
@@ -860,3 +860,20 @@ deployments:
   - vercel-labs/agent-skills/skills/react-best-practices
   active_owner: vercel-labs/agent-skills/skills/react-best-practices
   content_hash: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+- kind: uri
+  target: mcp
+  value: microsoft/playwright-mcp
+  runtime: claude
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+mcp_servers:
+- microsoft/playwright-mcp
+mcp_configs:
+  microsoft/playwright-mcp:
+    name: microsoft/playwright-mcp
+mcp_target_servers:
+  claude:
+  - microsoft/playwright-mcp
