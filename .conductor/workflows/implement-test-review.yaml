@@ -1,0 +1,284 @@
+workflow:
+  name: implement-test-review
+  description: >-
+    計画を立てたうえでタスクを実装し、コードレビューに合格してから実際にdev serverを起動して
+    playwright-mcpで実ブラウザから動作確認するワークフロー。レビュー却下・動作確認失敗時は実装へ差し戻す。
+  version: "2.0.0"
+  entry_point: resolve_working_dir
+
+  runtime:
+    provider: claude-agent-sdk
+    default_model: claude-sonnet-5
+    mcp_servers:
+      playwright:
+        command: npx
+        args: ["-y", "@playwright/mcp@latest", "--headless", "--isolated"]
+        tools: ["*"]
+
+  input:
+    task:
+      type: string
+      required: true
+      description: "実装してほしい内容の指示（例: 〇〇機能を追加する）"
+    dev_server_port:
+      type: number
+      required: false
+      default: 4173
+      description: >-
+        動作確認用にapps/webのdev server（vite）を起動するポート番号。
+        手動で動かしている開発サーバー（既定の5173）と衝突しないよう別ポートを既定値にしている。
+
+  # 実装/動作確認/レビューの各エージェントが直前の結果を参照できるようにする
+  context:
+    mode: accumulate
+
+  limits:
+    max_iterations: 20
+    timeout_seconds: 3600
+
+  # AGENTS.md（リポジトリの規約）を全エージェントのプロンプトに前置する
+  instructions:
+    - !file ../../AGENTS.md
+
+agents:
+  - name: resolve_working_dir
+    type: script
+    description: conductor run実行時のcwdの絶対パスを解決し、以降の全ステップで共有する
+    command: pwd
+    working_dir: "."
+    timeout: 10
+    routes:
+      - to: plan
+
+  - name: plan
+    type: agent
+    description: 実装に着手する前に方針を計画する
+    model: claude-opus-5
+    max_agent_iterations: 40
+    dialog:
+      trigger_prompt: |
+        要件が曖昧、複数の実装方針が考えられて判断がつかない、既存仕様との
+        整合性が不明といった、確認せずに進めると手戻りが起きそうな場合は
+        ダイアログに入ってユーザーに質問してください。
+        軽微な曖昧さ（命名や細部の実装方法など）は自分で妥当な判断をして
+        進めて構いません。
+    prompt: |
+      あなたはこのリポジトリの実装方針を計画する担当のソフトウェアエンジニアです。
+      作業ディレクトリ: {{ resolve_working_dir.output.stdout | trim }}
+
+      ## タスク
+      {{ workflow.input.task }}
+
+      ## 進め方
+      - 関連する既存コード（features/routes/openapi schema等）とAGENTS.mdの規約を
+        必要な範囲で調査し、実装方針を固めてください。大掛かりな調査は不要です。
+      - 要件が曖昧・複数の実装方針が考えられる場合は、いきなり決め打ちせず
+        ユーザーに質問してください（dialogが有効です）。
+      - このステップでは実装（ファイルの編集）は行わないでください。
+
+      計画がまとまったら、以下を含めて簡潔にまとめてください。
+      - 変更対象になりそうなファイル/箇所
+      - 実装アプローチ
+      - 懸念点・ユーザーとの確認事項（あれば）
+    output:
+      plan:
+        type: string
+        description: 実装方針・作業計画（変更対象ファイル、アプローチ、懸念点など）
+    routes:
+      - to: implement
+
+  - name: implement
+    type: agent
+    description: タスクを実装する
+    session_key: dev_cycle
+    max_agent_iterations: 150
+    prompt: |
+      あなたはこのリポジトリの実装を担当するソフトウェアエンジニアです。
+      作業ディレクトリ: {{ resolve_working_dir.output.stdout | trim }}
+
+      ## 重要: 検証について
+      このワークフローはlint/typecheck/testなどのコマンドを自動実行しません
+      （このワークフロー自身はチェックしないので、あなた自身の判断でpnpm lint /
+      pnpm typecheck など必要な範囲を実行し、型エラーや構文エラーがない状態にしてください。
+      ただしフルスイート（pnpm build や Storybookの全実行など）を毎回律儀に回す必要はなく、
+      変更内容に対して妥当な範囲のピンポイントな確認に留めてください）。
+      APIスキーマ（openapi/schema.yaml）やルーティングを変更した場合は、
+      `pnpm --filter @repo/web codegen` を実行して生成物（schema.gen.ts等）を最新化してください。
+
+      実装が完了すると、このワークフローが自動的にdev serverを起動し、
+      playwright-mcpで実ブラウザから動作確認します。失敗した場合はその内容とともに
+      あなたに差し戻されます。
+
+      ## タスク
+      {{ workflow.input.task }}
+
+      ## 実装方針（planステップで作成済み）
+      {{ plan.output.plan }}
+
+      {% if review is defined and review.output and review.output.approved == false %}
+      ## 直前のレビューで却下されました。以下の指摘を修正してください
+      {{ review.output.feedback }}
+      {% endif %}
+
+      {% if start_dev_server is defined and start_dev_server.output and start_dev_server.output.exit_code != 0 %}
+      ## 直前の実行でdev serverの起動に失敗しました。修正してください
+      stdout:
+      {{ start_dev_server.output.stdout }}
+
+      stderr:
+      {{ start_dev_server.output.stderr }}
+      {% endif %}
+
+      {% if browser_verify is defined and browser_verify.output and browser_verify.output.passed == false %}
+      ## 直前の実ブラウザでの動作確認に失敗しました。修正してください
+      {{ browser_verify.output.notes }}
+      {% endif %}
+
+      実装（または修正）が完了したら、変更内容を簡潔に要約してください。
+    output:
+      summary:
+        type: string
+        description: 実装内容の要約
+    routes:
+      - to: review
+
+  - name: review
+    type: agent
+    description: 実装内容をコードレビューする
+    session_key: dev_cycle
+    max_agent_iterations: 100
+    prompt: |
+      以下の実装をコードレビューしてください。
+      作業ディレクトリ: {{ resolve_working_dir.output.stdout | trim }}
+      git diff（および必要に応じて関連ファイル）を確認し、正しさ・タスクとの整合性・
+      リポジトリの規約（AGENTS.md）への準拠を評価してください。
+
+      ## タスク
+      {{ workflow.input.task }}
+
+      ## 実装の要約
+      {{ implement.output.summary }}
+
+      あなたはコードの正しさ・タスクとの整合性・AGENTS.mdの規約準拠のレビューに
+      集中してください（実ブラウザでのUI動作確認はこの後のステップで別途行うため、
+      ここでは不要です）。
+      lint/typecheck等の静的チェックはこのワークフローが自動実行していないため、
+      明らかな型エラーや規約違反があれば指摘してください。
+
+      問題がなければ approved: true としてください。
+      問題がある場合は approved: false とし、feedback に具体的な修正指示を書いてください。
+    output:
+      approved:
+        type: boolean
+        description: レビューに合格したか
+      feedback:
+        type: string
+        description: 修正が必要な場合の具体的な指摘事項(合格時は空文字でよい)
+    routes:
+      - to: start_dev_server
+        when: "{{ output.approved }}"
+      - to: implement
+
+  - name: start_dev_server
+    type: script
+    description: 動作確認用にapps/webのdev serverをバックグラウンドで起動する
+    command: bash
+    args:
+      - "-lc"
+      - |
+        set -uo pipefail
+        PORT="{{ workflow.input.dev_server_port }}"
+        LOG="$(mktemp -t conductor-dev-server).log"
+        nohup pnpm --filter @repo/web dev --port "$PORT" --strictPort > "$LOG" 2>&1 < /dev/null &
+        disown
+        for i in $(seq 1 60); do
+          if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
+            echo "dev server ready at http://localhost:$PORT"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "dev server did not become ready within 60s" >&2
+        cat "$LOG" >&2
+        exit 1
+    working_dir: "{{ resolve_working_dir.output.stdout | trim }}"
+    timeout: 90
+    routes:
+      - to: browser_verify
+        when: "exit_code == 0"
+      - to: stop_dev_server
+
+  - name: browser_verify
+    type: agent
+    description: playwright-mcpで実際にdev serverを操作し、UIの動作を確認する
+    max_agent_iterations: 60
+    prompt: |
+      playwright-mcpのツールを使って、http://localhost:{{ workflow.input.dev_server_port }}/ で
+      起動中の実際のアプリケーションを操作し、以下のタスクで実装された機能が実ブラウザ上で
+      正しく動作するかを確認してください。
+
+      ## 確認対象のタスク
+      {{ workflow.input.task }}
+
+      ## 実装の要約
+      {{ implement.output.summary }}
+
+      ## 確認方法
+      - 関連するページに遷移し、実際にフォーム入力・ボタンクリックなどの操作を行ってください
+      - 表示内容、バリデーションエラー、送信後の遷移や反映結果など、実際のユーザー操作として
+        期待通りに動くかを確認してください
+      - ブラウザのコンソールにエラーが出ていないか確認してください
+      - 判断に迷う場合はスクリーンショットを撮って確認してください
+
+      ## スクリーンショット
+      確認の過程で、実装結果が分かる主要な画面（正常系・エラー時など）について
+      playwright-mcpのbrowser_take_screenshotでスクリーンショットを撮影し、
+      {{ workflow.dir }}/.artifacts/ 以下にファイルとして保存してください
+      （ディレクトリが無ければ作成して構いません。ファイル名は内容が分かるようにしてください）。
+      保存した全パスを screenshot_paths に列挙してください。
+
+      問題がなければ passed: true としてください。
+      問題がある場合は passed: false とし、notes に再現手順と実際に見えた挙動を具体的に書いてください。
+    output:
+      passed:
+        type: boolean
+        description: 実ブラウザでの動作確認に合格したか
+      notes:
+        type: string
+        description: 確認結果の詳細（問題があれば再現手順と実際の挙動、なければ確認した内容の要約）
+      screenshot_paths:
+        type: array
+        description: 撮影したスクリーンショットの保存先パス一覧
+        items:
+          type: string
+    routes:
+      - to: stop_dev_server
+
+  - name: stop_dev_server
+    type: script
+    description: 動作確認用に起動したdev serverを停止する
+    command: bash
+    args:
+      - "-lc"
+      - |
+        PORT="{{ workflow.input.dev_server_port }}"
+        PIDS="$(lsof -ti tcp:"$PORT" 2>/dev/null || true)"
+        if [ -n "$PIDS" ]; then
+          kill $PIDS 2>/dev/null || true
+          sleep 1
+          kill -9 $PIDS 2>/dev/null || true
+        fi
+        exit 0
+    working_dir: "{{ resolve_working_dir.output.stdout | trim }}"
+    timeout: 30
+    routes:
+      - to: $end
+        when: "{{ (browser_verify is defined) and browser_verify.output.passed }}"
+      - to: implement
+
+output:
+  summary: "{{ implement.output.summary }}"
+  browser_verify_notes: "{% if browser_verify is defined %}{{ browser_verify.output.notes }}{% endif %}"
+  screenshot_paths: "{% if browser_verify is defined %}{{ browser_verify.output.screenshot_paths | json }}{% endif %}"
+  approved: "{{ review.output.approved }}"
+  feedback: "{{ review.output.feedback }}"

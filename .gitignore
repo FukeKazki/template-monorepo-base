@@ -25,3 +25,4 @@ schema.gen.ts
 apm_modules/
 
 .playwright-mcp/
+.conductor/workflows/.artifacts/
