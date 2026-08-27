@@ -7,6 +7,7 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { useUpdateProduct } from "../../mutation/use-update-product";
 import { ProductNotFoundError, useProductDetail } from "../../query/use-product-detail";
+import { InvalidProductDetailError } from "../../read-model/product-detail";
 import { ProductEditFormSchema, type ProductEditFormValues } from "./schema";
 
 type ProductEditFormProps = {
@@ -59,6 +60,12 @@ export const ProductEditForm = ({ productId }: ProductEditFormProps) => {
 
   if (error instanceof ProductNotFoundError) {
     return <p className="text-muted-foreground p-4 text-sm">商品が見つかりませんでした。</p>;
+  }
+
+  if (error instanceof InvalidProductDetailError) {
+    return (
+      <p className="text-destructive p-4 text-sm">商品データの形式が不正なため表示できません。</p>
+    );
   }
 
   if (error) {

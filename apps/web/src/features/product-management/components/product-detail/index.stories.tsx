@@ -52,6 +52,24 @@ export const NotFound: Story = {
   },
 };
 
+export const InvalidData: Story = {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get("/products/{id}", ({ params, response }) => {
+        const product = defaultProducts.find((product) => product.id === params.id);
+        return response(200).json({ ...(product ?? defaultProducts[0]!), imageUrl: "invalid-url" });
+      }),
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(
+      canvas.findByText("商品データの形式が不正なため表示できません。"),
+    ).resolves.toBeInTheDocument();
+  },
+};
+
 export const FetchError: Story = {
   beforeEach({ msw }) {
     msw.use(

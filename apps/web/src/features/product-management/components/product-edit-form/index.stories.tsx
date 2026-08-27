@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http as rawHttp, HttpResponse } from "msw";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { defaultProducts } from "@/lib/msw/handlers";
+import { defaultProducts, http } from "@/lib/msw/handlers";
 import { ProductEditForm } from "./index";
 
 const meta = {
@@ -80,5 +80,23 @@ export const NotFound: Story = {
     const canvas = within(canvasElement);
 
     await expect(canvas.findByText("商品が見つかりませんでした。")).resolves.toBeInTheDocument();
+  },
+};
+
+export const InvalidData: Story = {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get("/products/{id}", ({ params, response }) => {
+        const product = defaultProducts.find((product) => product.id === params.id);
+        return response(200).json({ ...(product ?? defaultProducts[0]!), imageUrl: "invalid-url" });
+      }),
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(
+      canvas.findByText("商品データの形式が不正なため表示できません。"),
+    ).resolves.toBeInTheDocument();
   },
 };

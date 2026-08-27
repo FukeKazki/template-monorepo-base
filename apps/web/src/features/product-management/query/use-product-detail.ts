@@ -27,7 +27,7 @@ const fetchProductDetail = async (id: string) => {
 export const useProductDetail = (id: string) => {
   const {
     data,
-    error,
+    error: queryError,
     isPending,
     refetch: refetchProductDetail,
   } = useQuery<
@@ -43,6 +43,9 @@ export const useProductDetail = (id: string) => {
   if (productDetail instanceof InvalidProductDetailError) {
     console.error(productDetail);
   }
+
+  const error: FetchProductDetailError | ProductNotFoundError | InvalidProductDetailError | null =
+    queryError ?? (productDetail instanceof InvalidProductDetailError ? productDetail : null);
 
   return {
     productDetail: productDetail instanceof InvalidProductDetailError ? undefined : productDetail,

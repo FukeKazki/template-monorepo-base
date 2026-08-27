@@ -12,6 +12,7 @@ import {
 import { Button } from "@/ui/button";
 import { useDeleteProduct } from "../../mutation/use-delete-product";
 import { ProductNotFoundError, useProductDetail } from "../../query/use-product-detail";
+import { InvalidProductDetailError } from "../../read-model/product-detail";
 
 type ProductDetailProps = {
   productId: string;
@@ -37,6 +38,12 @@ export const ProductDetail = ({ productId }: ProductDetailProps) => {
 
   if (error instanceof ProductNotFoundError) {
     return <p className="text-muted-foreground p-4 text-sm">商品が見つかりませんでした。</p>;
+  }
+
+  if (error instanceof InvalidProductDetailError) {
+    return (
+      <p className="text-destructive p-4 text-sm">商品データの形式が不正なため表示できません。</p>
+    );
   }
 
   if (error) {
