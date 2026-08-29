@@ -11,7 +11,8 @@ import {
 } from "@/ui/alert-dialog";
 import { Button } from "@/ui/button";
 import { useDeleteProduct } from "../../mutation/use-delete-product";
-import { ProductNotFoundError, useProductDetail } from "../../query/use-product-detail";
+import { ProductNotFoundError } from "../../port/fetch-product-detail";
+import { useProductDetail } from "../../query/use-product-detail";
 import { InvalidProductDetailError } from "../../read-model/product-detail";
 
 type ProductDetailProps = {

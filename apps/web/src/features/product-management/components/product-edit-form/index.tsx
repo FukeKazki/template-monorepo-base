@@ -6,7 +6,8 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { useUpdateProduct } from "../../mutation/use-update-product";
-import { ProductNotFoundError, useProductDetail } from "../../query/use-product-detail";
+import { ProductNotFoundError } from "../../port/fetch-product-detail";
+import { useProductDetail } from "../../query/use-product-detail";
 import { InvalidProductDetailError } from "../../read-model/product-detail";
 import { ProductEditFormSchema, type ProductEditFormValues } from "./schema";
 

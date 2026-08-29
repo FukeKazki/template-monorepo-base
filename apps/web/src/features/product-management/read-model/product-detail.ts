@@ -1,5 +1,6 @@
 import { TaggedError } from "better-result";
 import * as v from "valibot";
+import { ProductIdSchema } from "./product-id";
 
 const priceFormatter = new Intl.NumberFormat("ja-JP", {
   style: "currency",
@@ -8,7 +9,7 @@ const priceFormatter = new Intl.NumberFormat("ja-JP", {
 
 export const ProductDetailSchema = v.pipe(
   v.object({
-    id: v.pipe(v.string(), v.nonEmpty()),
+    id: ProductIdSchema,
     name: v.pipe(v.string(), v.nonEmpty()),
     price: v.number(),
     imageUrl: v.pipe(v.string(), v.nonEmpty(), v.url()),

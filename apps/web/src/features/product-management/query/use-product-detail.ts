@@ -1,55 +1,68 @@
-import { useQuery } from "@tanstack/react-query";
-import { TaggedError } from "better-result";
 import { apiClient } from "@/lib/open-api/client";
+import { useResultQuery } from "@/lib/tanstack-query/use-result-query";
+import {
+  FetchProductDetailError,
+  type FetchProductDetail,
+  ProductNotFoundError,
+} from "../port/fetch-product-detail";
 import { constructProductDetail, InvalidProductDetailError } from "../read-model/product-detail";
+import type { ProductId } from "../read-model/product-id";
 
-export class FetchProductDetailError extends TaggedError("FetchProductDetailError")<{
-  cause?: unknown;
-}> {}
-
-export class ProductNotFoundError extends TaggedError("ProductNotFoundError")<{
-  id: string;
-}> {}
-
-const fetchProductDetail = async (id: string) => {
+export const fetchProductDetail: FetchProductDetail = async (id) => {
   const { data, error, response } = await apiClient.GET("/products/{id}", {
     params: { path: { id } },
   });
   if (error) {
     if (response.status === 404) {
-      throw new ProductNotFoundError({ id });
+      return new ProductNotFoundError({ id });
     }
-    throw new FetchProductDetailError({ cause: error });
+    return new FetchProductDetailError({ cause: error });
   }
   return data;
 };
 
-export const useProductDetail = (id: string) => {
+export const useProductDetail = (id: ProductId) => {
   const {
     data,
     error: queryError,
     isPending,
     refetch: refetchProductDetail,
-  } = useQuery<
-    Awaited<ReturnType<typeof fetchProductDetail>>,
-    FetchProductDetailError | ProductNotFoundError
-  >({
+  } = useResultQuery({
     queryKey: ["productDetail", id],
     queryFn: () => fetchProductDetail(id),
     retry: false,
   });
 
-  const productDetail = data ? constructProductDetail(data) : undefined;
-  if (productDetail instanceof InvalidProductDetailError) {
-    console.error(productDetail);
+  if (queryError) {
+    return {
+      productDetail: undefined,
+      error: queryError,
+      isPending,
+      refetchProductDetail,
+    };
+  }
+  if (!data) {
+    return {
+      productDetail: undefined,
+      error: undefined,
+      isPending,
+      refetchProductDetail,
+    };
   }
 
-  const error: FetchProductDetailError | ProductNotFoundError | InvalidProductDetailError | null =
-    queryError ?? (productDetail instanceof InvalidProductDetailError ? productDetail : null);
+  const productDetail = constructProductDetail(data);
+  if (productDetail instanceof InvalidProductDetailError) {
+    return {
+      productDetail: undefined,
+      error: productDetail,
+      isPending,
+      refetchProductDetail,
+    };
+  }
 
   return {
-    productDetail: productDetail instanceof InvalidProductDetailError ? undefined : productDetail,
-    error,
+    productDetail,
+    error: undefined,
     isPending,
     refetchProductDetail,
   };
