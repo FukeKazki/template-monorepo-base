@@ -1,14 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { http as rawHttp, HttpResponse } from "msw";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import * as v from "valibot";
 import { defaultProducts, http } from "@/lib/msw/handlers";
+import { ProductIdSchema } from "../../read-model/product-id";
 import { ProductEditForm } from "./index";
 
 const meta = {
   title: "features/ProductManagement/ProductEditForm",
   component: ProductEditForm,
   args: {
-    productId: defaultProducts[0]?.id ?? "1",
+    productId: v.parse(ProductIdSchema, defaultProducts[0]?.id ?? "1"),
   },
 } satisfies Meta<typeof ProductEditForm>;
 
@@ -74,7 +76,7 @@ export const SubmitError: Story = {
 
 export const NotFound: Story = {
   args: {
-    productId: "not-found-id",
+    productId: v.parse(ProductIdSchema, "not-found-id"),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

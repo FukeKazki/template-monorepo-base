@@ -14,9 +14,10 @@ import { useDeleteProduct } from "../../mutation/use-delete-product";
 import { ProductNotFoundError } from "../../port/fetch-product-detail";
 import { useProductDetail } from "../../query/use-product-detail";
 import { InvalidProductDetailError } from "../../read-model/product-detail";
+import type { ProductId } from "../../read-model/product-id";
 
 type ProductDetailProps = {
-  productId: string;
+  productId: ProductId;
 };
 
 export const ProductDetail = ({ productId }: ProductDetailProps) => {

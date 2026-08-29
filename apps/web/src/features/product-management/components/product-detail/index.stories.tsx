@@ -1,14 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { delay, http as rawHttp, HttpResponse } from "msw";
 import { expect, screen, userEvent, within } from "storybook/test";
+import * as v from "valibot";
 import { defaultProducts, http } from "@/lib/msw/handlers";
+import { ProductIdSchema } from "../../read-model/product-id";
 import { ProductDetail } from "./index";
 
 const meta = {
   title: "features/ProductManagement/ProductDetail",
   component: ProductDetail,
   args: {
-    productId: defaultProducts[0]?.id ?? "1",
+    productId: v.parse(ProductIdSchema, defaultProducts[0]?.id ?? "1"),
   },
 } satisfies Meta<typeof ProductDetail>;
 
@@ -43,7 +45,7 @@ export const Loading: Story = {
 
 export const NotFound: Story = {
   args: {
-    productId: "not-found-id",
+    productId: v.parse(ProductIdSchema, "not-found-id"),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
