@@ -4,4 +4,4 @@ allowBuilds:
   esbuild: true
   msw: true
 minimumReleaseAgeExclude:
-  - '@fukke0906/definefn@0.1.0'
+  - "@fukke0906/definefn@0.1.0"
