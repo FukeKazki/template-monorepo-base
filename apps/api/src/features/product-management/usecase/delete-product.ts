@@ -1,5 +1,6 @@
-import * as domain from "../domain/product";
+import type { ProductId } from "../domain/product";
+import { ProductNotFoundError } from "../domain/ports";
 import { remove } from "../repo/remove";
 
 export const deleteProduct = (id: string): boolean =>
-  !domain.ProductNotFoundError.is(remove(id as domain.ProductId));
+  !ProductNotFoundError.is(remove(id as ProductId));

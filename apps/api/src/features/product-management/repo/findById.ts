@@ -1,4 +1,4 @@
-import { ProductNotFoundError, type FindById } from "../domain/product";
+import { ProductNotFoundError, type FindById } from "../domain/ports";
 import { store } from "./store";
 
 export const findById: FindById = (id) => {

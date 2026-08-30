@@ -1,4 +1,4 @@
-import { ProductNotFoundError, type Remove } from "../domain/product";
+import { ProductNotFoundError, type Remove } from "../domain/ports";
 import { store } from "./store";
 
 export const remove: Remove = (id) => {
