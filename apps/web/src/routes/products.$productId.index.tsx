@@ -9,7 +9,7 @@ function ProductDetailPage() {
   const { productId } = Route.useParams();
 
   return (
-    <main>
+    <main className="p-4">
       <ProductDetail productId={productId} />
     </main>
   );

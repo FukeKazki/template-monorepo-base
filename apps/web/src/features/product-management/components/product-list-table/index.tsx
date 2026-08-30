@@ -7,12 +7,12 @@ export const ProductListTable = () => {
   const { productList, error, isPending, refetchProductList } = useProductList();
 
   if (isPending) {
-    return <p className="text-muted-foreground p-4 text-sm">読み込み中...</p>;
+    return <p className="text-muted-foreground text-sm">読み込み中...</p>;
   }
 
   if (error) {
     return (
-      <div role="alert" className="flex flex-col items-start gap-2 p-4">
+      <div role="alert" className="flex flex-col items-start gap-2">
         <p className="text-destructive">商品一覧の取得に失敗しました。</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
         <Button variant="outline" onClick={() => refetchProductList()}>

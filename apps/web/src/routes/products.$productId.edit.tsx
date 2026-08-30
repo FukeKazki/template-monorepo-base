@@ -9,7 +9,7 @@ function ProductEditPage() {
   const { productId } = Route.useParams();
 
   return (
-    <main>
+    <main className="p-4">
       <ProductEditForm productId={productId} />
     </main>
   );

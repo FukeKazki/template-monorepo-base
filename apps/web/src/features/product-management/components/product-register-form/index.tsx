@@ -28,7 +28,7 @@ export const ProductRegisterForm = () => {
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4 p-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="product-register-name">商品名</Label>
         <Input id="product-register-name" aria-invalid={!!errors.name} {...register("name")} />

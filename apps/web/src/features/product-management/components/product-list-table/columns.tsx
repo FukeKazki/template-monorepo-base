@@ -10,7 +10,7 @@ export const columns: ColumnDef<ProductListItem>[] = [
       <img
         src={row.original.imageUrl}
         alt={row.original.name}
-        className="size-10 rounded-md object-cover"
+        className="size-10 rounded-lg object-cover"
       />
     ),
   },

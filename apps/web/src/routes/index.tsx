@@ -15,7 +15,7 @@ function Home() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold">商品一覧</h2>
+        <h2 className="text-lg font-semibold">商品一覧</h2>
         <ProductListTable />
       </section>
     </main>
