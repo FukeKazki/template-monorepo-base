@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/open-api/client";
+import { apiClient } from "@/lib/api/client";
 import { constructProductList } from "../read-model/product-list";
 
 export class FetchProductListError extends TaggedError("FetchProductListError")<{
@@ -8,11 +8,11 @@ export class FetchProductListError extends TaggedError("FetchProductListError")<
 }> {}
 
 const fetchProductList = async () => {
-  const { data, error } = await apiClient.GET("/products");
-  if (error) {
-    throw new FetchProductListError({ cause: error });
+  const res = await apiClient.products.$get();
+  if (res.status !== 200) {
+    throw new FetchProductListError({ cause: await res.json() });
   }
-  return data;
+  return await res.json();
 };
 
 export const useProductList = () => {

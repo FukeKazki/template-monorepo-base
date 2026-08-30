@@ -8,5 +8,5 @@
     "types": ["node"],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "scripts", "vitest.config.ts", "worker-configuration.d.ts"]
+  "include": ["src", "vitest.config.ts", "worker-configuration.d.ts"]
 }

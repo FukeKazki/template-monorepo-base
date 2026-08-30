@@ -19,9 +19,9 @@ pnpm format:check          # oxfmt のフォーマットチェック（CI相当�
 pnpm deploy                # apps/api → apps/web の順に wrangler deploy（Service Bindingの参照先を先に用意する必要があるため順序固定）
 ```
 
-- `apps/web` の `build` / `typecheck` は事前に `codegen`（`tsr generate` によるルート生成 + `openapi-typescript` による `apps/api/openapi.json` からの型生成 + `wrangler types` による `worker-configuration.d.ts` 生成）を実行してから本処理に入る。`build` / `typecheck` は `tsconfig.json`（`src/`）と `tsconfig.worker.json`（`worker/`）の両方を通す。
-- `apps/api` の `typecheck` は事前に `codegen`（`wrangler types` による `worker-configuration.d.ts` 生成）を実行する。`build` は `openapi.json` の再生成 + `wrangler deploy --dry-run`。
-- OpenAPIスキーマの再生成: `pnpm --filter @repo/api run openapi`
+- `apps/web` の `build` / `typecheck` は事前に `codegen`（`tsr generate` によるルート生成 + `@repo/api` の `build:types` によるAPI型定義の出力 + `wrangler types` による `worker-configuration.d.ts` 生成）を実行してから本処理に入る。`build` / `typecheck` は `tsconfig.json`（`src/`）と `tsconfig.worker.json`（`worker/`）の両方を通す。
+- `apps/api` の `typecheck` は `build:types`（`wrangler types` → `tsc -p tsconfig.build.json`）そのもの。型チェックと同時に `apps/web` が読む `.d.ts` を `dist-types/` に出力する。`build` は `build:types` + `wrangler deploy --dry-run`。
+- `apps/web` へ渡すAPI型定義の再生成: `pnpm --filter @repo/api run build:types`
 - 単一テストの実行: `pnpm --filter @repo/web exec vitest run <path>` または `pnpm --filter @repo/web exec vitest <pattern>`（watchモード）
 - unitテストのみ実行（CIと同等）: `pnpm -r run test:unit`
 - Storybookの起動: `pnpm --filter @repo/web storybook`（ポート6006）
@@ -30,20 +30,19 @@ pnpm deploy                # apps/api → apps/web の順に wrangler deploy（S
 - D1マイグレーションの適用（ローカル）: `pnpm --filter @repo/api db:migrate` / （リモート）: `pnpm --filter @repo/api db:migrate:remote`（`apps/api/wrangler.jsonc` に実際の `database_id` を設定済みであることが前提。後述）
 - D1へのシード投入（ローカルのみ）: `pnpm --filter @repo/api db:seed`
 
-CI（[ci.yml](.github/workflows/ci.yml)）は `lint` → `format:check` → `typecheck` → `openapi`再生成 → `git diff --exit-code apps/api/openapi.json` → `test:unit`（Storybookのplay関数テストは含まない） → `build` の順で実行される。変更後はこの順でローカル確認するとCI通過の見込みが立てやすい。
+CI（[ci.yml](.github/workflows/ci.yml)）は `lint` → `format:check` → `typecheck` → `test:unit`（Storybookのplay関数テストは含まない） → `build` の順で実行される。api とweb の契約のズレは `typecheck` が検出する。変更後はこの順でローカル確認するとCI通過の見込みが立てやすい。
 
 ## アーキテクチャ
 
-pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`（[pnpm-workspace.yaml](pnpm-workspace.yaml)）で、現状 `apps/web`（React SPA）と `apps/api`（Cloudflare Workers 上の Hono APIサーバー）の2つ。両者はコード共有をせず、**OpenAPIスキーマ（`apps/api/openapi.json`）だけを介して繋がる**。
+pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`（[pnpm-workspace.yaml](pnpm-workspace.yaml)）で、現状 `apps/web`（React SPA）と `apps/api`（Cloudflare Workers 上の Hono APIサーバー）の2つ。両者は **Hono RPC の型（`apps/api` が export する `AppType`）だけを介して繋がる**（ランタイムコードの共有はしない）。
 
 ### apps/api の構造
 
-- `src/index.ts` — Workerのエントリ。`export default app`（Honoの`.fetch`）。`new Hono<{ Bindings: Env }>()` で D1 などのバインディング型を通す。CORSを有効化し、feature単位のサブアプリを `app.route("/", ...)` でマウントする。動作確認用に `GET /openapi.json` も生やしている。
-- `src/openapi.ts` — OpenAPIドキュメントのメタ情報（`info` など）。実行時のエンドポイントと生成スクリプトの双方が参照する。
+- `src/index.ts` — Workerのエントリ。`export default app`（Honoの`.fetch`）。`new Hono<{ Bindings: Env }>()` で D1 などのバインディング型を通し、feature単位のサブアプリを `.route("/", ...)` でマウントする。**チェーンで書くこと**（`app.route(...)` を別行にするとRPCの型が落ちる）。あわせて `apps/web` に渡す `AppType` を export する。`Hono<BlankEnv, ExtractSchema<typeof app>, "/">` としてBindings（`Env`）を落とし、Workers固有のグローバル型がweb側に漏れないようにしている。
 - `src/lib/db.ts` — `createDb(d1: D1Database)` で `drizzle-orm/d1` の `Db` インスタンスを組み立てる薄いラッパー。
 - `src/features/<feature-name>/` — `route.ts`（Honoのサブアプリ。`new Hono<{ Bindings: Env }>()`。各ハンドラの冒頭で `createProductRepo(createDb(c.env.DB))` のように repo を組み立てて usecase に渡す composition root）、`usecase/`（ユースケース単位に1ファイル。例: `get-product-list.ts`, `create-product.ts`。第1引数で `ProductRepo` を受け取る async 関数。`domain/` と `repo/` を呼び出し、DTOへの詰め替えを担う。`schema.ts` もここに置く。valibotスキーマとDTO型 `XxxDTO` を定義）、`domain/`（ドメインモデル。`product.ts` にエンティティ本体を関数型・不変オブジェクトで表現し、`ports.ts` に `FindById`/`Save` のような repo 操作の関数型シグネチャ（戻り値は `Promise`）と `ProductRepo` 型、`TaggedError`（`better-result`）による `XxxNotFoundError` などのエラー型を定義する。Cloudflare / Drizzle の型には依存させない）、`repo/`（データアクセス。Drizzle ORM 経由の D1。`table.ts` にテーブル定義（`drizzle-kit` の `schema` glob 対象）、操作単位に1ファイル（`findAll.ts`, `findById.ts`, `save.ts`, `remove.ts`）で `(db: Db) => Port` のファクトリとして実装し、not foundなどはドメインのエラー型を返す。`index.ts` の `createProductRepo(db)` が feature 単位の composition root）の構成。`apps/web` の feature ディレクトリ規約に揃えている。
-- `scripts/generate-openapi.ts` — `hono-openapi` の `generateSpecs()` でスキーマを組み立て `openapi.json` に書き出す。サーバー起動は不要。
 - `wrangler.jsonc` — Cloudflare Workers の設定。`d1_databases` で D1 バインディング（`binding: "DB"`）を定義する。`database_id` は実際のCloudflare D1データベースのUUIDを**直接コミットする**（UUID自体は秘匿情報ではなく、操作にはCloudflareアカウントの認証情報が別途必要なため）。`wrangler types` が `worker-configuration.d.ts`（gitignore対象）を生成し、`Env.DB: D1Database` を含むWorkersのランタイム型を供給する。`tsconfig.json` では `lib` から `DOM` を外している。
+- `tsconfig.build.json` — `apps/web` に渡す型定義の出力設定（`emitDeclarationOnly` で `dist-types/` へ）。`package.json` の `exports["./app-type"]` がその入口で、web は `@repo/api/app-type` から `AppType` を type-only import する。
 - `drizzle.config.ts` / `drizzle/migrations/` — `drizzle-kit generate` が `src/features/*/repo/table.ts` から読み取ってマイグレーションSQLを `drizzle/migrations/` に出力する（**コミットする**）。適用は `wrangler d1 migrations apply` 側で行うため `driver: "d1-http"` は付けない（Cloudflare APIトークン不要）。
 - `drizzle/seed.sql` — ローカル開発用の初期データ（`INSERT OR IGNORE`）。マイグレーションには含めず、`db:seed` で別途投入する。リモートには流し込まない。
 
@@ -52,8 +51,8 @@ pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`�
 - `src/features/<feature-name>/` — 機能単位のディレクトリに、`components/`（コンポーネントと `*.stories.tsx`）、`query/`（TanStack Queryの `useQuery` カスタムフック）、`mutation/`（TanStack Queryの `useMutation` カスタムフック）、`read-model/`（valibotでのスキーマ検証・整形ロジックとその `*.spec.ts`）などのサブディレクトリを持つ構成（例: `features/product-management/`）。新規機能もこのパターンに従う。
 - `src/routes/` — TanStack Routerのファイルベースルーティング定義（`__root.tsx` がルートレイアウト）。ここから `routeTree.gen.ts` が自動生成されるため、生成物は直接編集しない。
 - `src/ui/` — shadcn/ui 由来の再利用可能UIプリミティブ（例: `ui/button.tsx`）。shadcn CLIで追加されるコンポーネントの置き場所（[components.json](apps/web/components.json) の `aliases.ui` 参照）。
-- `src/lib/open-api/` — `apps/api/openapi.json` から生成される型定義 `schema.gen.ts`（コミット対象外、`codegen` で再生成）と、それを使う `openapi-fetch` クライアント（`client.ts`）。
-- `src/lib/msw/` — MSWのリクエストハンドラ（`handlers.ts`。`openapi-msw` で `schema.gen.ts` の型を使い定義）と、Node向け（`node.ts`、Vitestのunitテストで使用）・ブラウザ向け（`browser.ts`、`dev-entry.ts` 経由で開発サーバーとStorybookが使用）のセットアップ。ハンドラは1箇所（`handlers.ts`）に定義し、開発サーバー・テスト・Storybookの3箇所で共有する。
+- `src/lib/api/client.ts` — `hono/client` の `hc<AppType>` で作るRPCクライアント（`apiClient`）。型は `@repo/api/app-type` から直接受け取るのでコード生成物は無い。
+- `src/lib/msw/` — MSWのリクエストハンドラ（`handlers.ts`。素の `msw` で定義し、レスポンスの形だけ `InferResponseType` でAPIの型に縛る）と、Node向け（`node.ts`、Vitestのunitテストで使用）・ブラウザ向け（`browser.ts`、`dev-entry.ts` 経由で開発サーバーとStorybookが使用）のセットアップ。ハンドラは1箇所（`handlers.ts`）に定義し、開発サーバー・テスト・Storybookの3箇所で共有する。
 - `src/lib/utils.ts` — `cn()` などの共通ユーティリティ。
 - `src/dev-entry.ts` — 開発サーバー起動時にMSWのService Workerを起動してから `main.tsx` を読み込むエントリポイント。`vite.config.ts` の `dev-entry` プラグインが `USE_MOCK=false` でない限り `index.html` の読み込み先をこちらに差し替える。
 - `src/test/setup.ts` — Vitestの `unit` プロジェクト向けグローバルセットアップ（MSWサーバーの起動/リセット/終了、Testing Libraryの `cleanup`）。
@@ -64,19 +63,20 @@ pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`�
 
 ### API・データフェッチ
 
-スキーマは **`apps/api` の実装 → `apps/api/openapi.json` → `apps/web` の `schema.gen.ts`** という一方向で流れる。`openapi.json` を手で編集してはいけない。
+型は **`apps/api` の実装 → `apps/api/dist-types/`（`.d.ts`） → `apps/web`** という一方向で流れる。契約ファイルもコード生成物も無く、api側の変更は `pnpm typecheck` がそのままweb側の型エラーとして検出する。
 
-1. `apps/api/src/features/<name>/schema.ts` にvalibotスキーマを定義し、`route.ts` の `describeRoute` / `resolver` / `validator` に渡す。
-2. `pnpm --filter @repo/api run openapi` で `apps/api/openapi.json` を再生成し、**コミットする**（CIが再生成して差分が出ないことを検証する）。
-3. `pnpm --filter @repo/web codegen`（`build`/`typecheck` からも自動実行）で `openapi-typescript` により `apps/web/src/lib/open-api/schema.gen.ts` を生成する。
+1. `apps/api/src/features/<name>/schema.ts` にvalibotスキーマを定義し、`route.ts` の `sValidator`（`@hono/standard-validator`）に渡す。
+2. `pnpm --filter @repo/api run build:types`（`pnpm typecheck` や web の `codegen` からも自動実行）で `dist-types/` を更新する。
+3. `apps/web` は `@/lib/api/client` の `apiClient` から補完付きで呼ぶ。
 
-- **`components.schemas` に名前付きで載せたいスキーマには `v.metadata({ ref: "Xxx" })` を付ける**（例: `v.pipe(v.object({...}), v.metadata({ ref: "Product" }))`）。これが無いとスキーマがインライン展開され、web側の `components["schemas"]["Xxx"]` が生成されない。`ref` 名のリネームはweb側の破壊的変更になる。
-- ルートのパスは `apps/api` 側では**ルート直下**（`/products`）に定義する。`apps/web` の `apiClient`（baseUrl = `origin + /api`）とMSW（`baseUrl: "/api"`）がスキーマ上のパスに `/api` を前置する前提のため、api側に `basePath("/api")` を付けると二重になる。
-- Honoの `:id` 記法は生成時に自動的にOpenAPIの `{id}` へ変換される。
-- バリデーション失敗時はデフォルトだとvalibotのissueがそのまま返るため、`validator` の第3引数のhookで `Error` スキーマの形（`{ message }`）に揃える。
-- APIアクセスは `src/lib/open-api/client.ts` の `apiClient`（`openapi-fetch`）経由で行い、TanStack Queryの `useQuery`/`useMutation` でラップする（`features/<name>/query/` 配下）。
-- APIレスポンスの検証・変形はvalibotのスキーマを `features/<name>/read-model/` に定義し、`safeParse` で行う。
-- モックは `src/lib/msw/handlers.ts` に `openapi-msw` の `http` ヘルパーで定義する。開発サーバー（`dev-entry.ts` → `browser.ts`）、Vitestのunitテスト（`test/setup.ts` → `node.ts`）、Storybook（`.storybook/preview.tsx` の `msw-storybook-addon`）が同じハンドラを参照するため、実装より先にハンドラを追加/更新すると三箇所に反映される。
+- **ルートはメソッドチェーンで定義する**（[route.ts](apps/api/src/features/product-management/route.ts) 参照）。途中で変数に受け直すとRPCの型が落ちる。同様に `apps/api/src/index.ts` の `.route()` もチェーンで書く。
+- **ステータスコードを明示する**（`c.json(product, 200)` / `c.json(x, 201)`）。クライアント側は `res.status` で分岐して `await res.json()` の型をナローイングするため、省略すると型が絞れない。
+- ルートのパスは `apps/api` 側では**ルート直下**（`/products`）に定義する。`apiClient` の baseUrl（`origin + /api`）が `/api` を前置する前提のため、api側に `basePath("/api")` を付けると二重になる。
+- バリデーション失敗時はデフォルトだとvalibotのissueがそのまま返るため、`sValidator` の第3引数のhookで `{ message }` の形に揃える（`param` バリデータにも付けて400のレスポンス形を統一する）。
+- **`hono` のバージョンは `apps/api` と `apps/web` で揃える**。ズレると "excessively deep" 型エラーや型が `any` に落ちる原因になる。`AppType` の補完が効かなくなったときは、バージョン差異・`dist-types/` の未生成・TSサーバーの再起動忘れをこの順で疑う。
+- APIアクセスは `apiClient` 経由で行い、TanStack Queryの `useQuery`/`useMutation` でラップする（`features/<name>/query/` `mutation/` 配下）。リクエスト/レスポンスの型は `hono/client` の `InferRequestType` / `InferResponseType` から引く。
+- APIレスポンスの検証・変形はvalibotのスキーマを `features/<name>/read-model/` に定義し、`safeParse` で行う（transport非依存の層なのでRPCの型とは独立している）。
+- モックは `src/lib/msw/handlers.ts` に素の `msw` の `http` ヘルパーで定義する（パスは `/api` を含めたフルパス）。開発サーバー（`dev-entry.ts` → `browser.ts`）、Vitestのunitテスト（`test/setup.ts` → `node.ts`）、Storybook（`.storybook/preview.tsx` の `msw-storybook-addon`）が同じハンドラを参照するため、実装より先にハンドラを追加/更新すると三箇所に反映される。
 
 ### 実APIに繋いで動かす
 
@@ -144,4 +144,4 @@ pnpm --filter @repo/web build && pnpm --filter @repo/web deploy
 
 ### Lint/Format
 
-[oxlint](https://oxc.rs/) と [oxfmt](https://oxc.rs/) を使用（ESLint/Prettierではない）。設定は [.oxlintrc.json](.oxlintrc.json)（`react`, `react-perf` プラグイン、`correctness`カテゴリをerror化）と [.oxfmtrc.json](.oxfmtrc.json)。生成物である `apps/api/openapi.json` はoxfmtの対象外にしている（フォーマットすると再生成のたびに差分が出るため）。
+[oxlint](https://oxc.rs/) と [oxfmt](https://oxc.rs/) を使用（ESLint/Prettierではない）。設定は [.oxlintrc.json](.oxlintrc.json)（`react`, `react-perf` プラグイン、`correctness`カテゴリをerror化）と [.oxfmtrc.json](.oxfmtrc.json)。

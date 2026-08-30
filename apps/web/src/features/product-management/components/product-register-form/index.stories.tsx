@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { http as rawHttp, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ProductRegisterForm } from "./index";
 
@@ -39,7 +39,7 @@ export const ValidationError: Story = {
 export const SubmitError: Story = {
   beforeEach({ msw }) {
     msw.use(
-      rawHttp.post("/api/products", () =>
+      http.post("/api/products", () =>
         HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
       ),
     );

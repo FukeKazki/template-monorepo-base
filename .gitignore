@@ -1,6 +1,8 @@
 node_modules
 dist
 dist-ssr
+# apps/api が apps/web へ渡す型定義の出力先
+dist-types
 *.local
 
 .DS_Store
@@ -18,7 +20,6 @@ storybook-static
 
 .tanstack
 routeTree.gen.ts
-schema.gen.ts
 # wrangler types の生成物
 worker-configuration.d.ts
 .wrangler/

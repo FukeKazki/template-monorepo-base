@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { delay, http as rawHttp, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { expect, within } from "storybook/test";
-import { defaultProducts, http } from "@/lib/msw/handlers";
+import { defaultProducts } from "@/lib/msw/handlers";
 import { ProductListTable } from "./index";
 
 const meta = {
@@ -26,9 +26,9 @@ export const Default: Story = {
 export const Loading: Story = {
   beforeEach({ msw }) {
     msw.use(
-      http.get("/products", async ({ response }) => {
+      http.get("/api/products", async () => {
         await delay("infinite");
-        return response(200).json(defaultProducts);
+        return HttpResponse.json(defaultProducts);
       }),
     );
   },
@@ -41,7 +41,7 @@ export const Loading: Story = {
 
 export const Empty: Story = {
   beforeEach({ msw }) {
-    msw.use(http.get("/products", ({ response }) => response(200).json([])));
+    msw.use(http.get("/api/products", () => HttpResponse.json([])));
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -53,7 +53,7 @@ export const Empty: Story = {
 export const FetchError: Story = {
   beforeEach({ msw }) {
     msw.use(
-      rawHttp.get("/api/products", () =>
+      http.get("/api/products", () =>
         HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
       ),
     );

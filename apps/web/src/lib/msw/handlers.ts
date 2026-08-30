@@ -1,9 +1,13 @@
-import { createOpenApiHttp } from "openapi-msw";
-import type { paths } from "@/lib/open-api/schema.gen";
+import type { InferResponseType } from "hono/client";
+import { http, HttpResponse } from "msw";
+import type { apiClient } from "@/lib/api/client";
 
-export const http = createOpenApiHttp<paths>({ baseUrl: "/api" });
+// レスポンスの形は Hono RPC の型から引く（api側のスキーマを変えるとここが型エラーになる）
+type Product = InferResponseType<(typeof apiClient.products)[":id"]["$get"], 200>;
 
-export const defaultProducts = [
+const NOT_FOUND_MESSAGE = "商品が見つかりません";
+
+export const defaultProducts: Product[] = [
   {
     id: "1",
     name: "ワイヤレスマウス",
@@ -19,32 +23,37 @@ export const defaultProducts = [
   { id: "3", name: "USB-Cハブ", price: 4500, imageUrl: "https://picsum.photos/seed/hub/100" },
 ];
 
+const findProduct = (id: string | readonly string[] | undefined) =>
+  defaultProducts.find((product) => product.id === id);
+
 export const handlers = [
-  http.get("/products", ({ response }) => response(200).json(defaultProducts)),
-  http.post("/products", async ({ request, response }) => {
-    const body = await request.json();
-    return response(201).json({ id: crypto.randomUUID(), ...body });
+  http.get("/api/products", () => HttpResponse.json(defaultProducts satisfies Product[])),
+  http.post("/api/products", async ({ request }) => {
+    const body = (await request.json()) as Omit<Product, "id">;
+    return HttpResponse.json({ id: crypto.randomUUID(), ...body } satisfies Product, {
+      status: 201,
+    });
   }),
-  http.get("/products/{id}", ({ params, response }) => {
-    const product = defaultProducts.find((product) => product.id === params.id);
+  http.get("/api/products/:id", ({ params }) => {
+    const product = findProduct(params["id"]);
     if (!product) {
-      return response(404).json({ message: "商品が見つかりません" });
+      return HttpResponse.json({ message: NOT_FOUND_MESSAGE }, { status: 404 });
     }
-    return response(200).json(product);
+    return HttpResponse.json(product satisfies Product);
   }),
-  http.put("/products/{id}", async ({ params, request, response }) => {
-    const product = defaultProducts.find((product) => product.id === params.id);
+  http.put("/api/products/:id", async ({ params, request }) => {
+    const product = findProduct(params["id"]);
     if (!product) {
-      return response(404).json({ message: "商品が見つかりません" });
+      return HttpResponse.json({ message: NOT_FOUND_MESSAGE }, { status: 404 });
     }
-    const body = await request.json();
-    return response(200).json({ id: product.id, ...body });
+    const body = (await request.json()) as Omit<Product, "id">;
+    return HttpResponse.json({ id: product.id, ...body } satisfies Product);
   }),
-  http.delete("/products/{id}", ({ params, response }) => {
-    const product = defaultProducts.find((product) => product.id === params.id);
+  http.delete("/api/products/:id", ({ params }) => {
+    const product = findProduct(params["id"]);
     if (!product) {
-      return response(404).json({ message: "商品が見つかりません" });
+      return HttpResponse.json({ message: NOT_FOUND_MESSAGE }, { status: 404 });
     }
-    return response(204).empty();
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

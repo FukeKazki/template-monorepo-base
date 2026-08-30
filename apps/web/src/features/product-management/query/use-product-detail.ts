@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/open-api/client";
+import { apiClient } from "@/lib/api/client";
 import { useResultQuery } from "@/lib/tanstack-query/use-result-query";
 import {
   FetchProductDetailError,
@@ -9,16 +9,14 @@ import { constructProductDetail, InvalidProductDetailError } from "../read-model
 import type { ProductId } from "../read-model/product-id";
 
 export const fetchProductDetail: FetchProductDetail = async (id) => {
-  const { data, error, response } = await apiClient.GET("/products/{id}", {
-    params: { path: { id } },
-  });
-  if (error) {
-    if (response.status === 404) {
-      return new ProductNotFoundError({ id });
-    }
-    return new FetchProductDetailError({ cause: error });
+  const res = await apiClient.products[":id"].$get({ param: { id } });
+  if (res.status === 404) {
+    return new ProductNotFoundError({ id });
   }
-  return data;
+  if (res.status !== 200) {
+    return new FetchProductDetailError({ cause: await res.json() });
+  }
+  return await res.json();
 };
 
 export const useProductDetail = (id: ProductId) => {

@@ -1,0 +1,13 @@
+{
+  // apps/web に渡す型定義(.d.ts)を出力するための設定。
+  // web は Hono RPC の AppType をこの出力から type-only import する。
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "dist-types"
+  },
+  "include": ["src", "worker-configuration.d.ts"]
+}

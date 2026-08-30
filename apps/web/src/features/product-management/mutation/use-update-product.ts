@@ -1,24 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/open-api/client";
-import type { components } from "@/lib/open-api/schema.gen";
+import type { InferRequestType, InferResponseType } from "hono/client";
+import { apiClient } from "@/lib/api/client";
 
 export class UpdateProductError extends TaggedError("UpdateProductError")<{
   cause?: unknown;
 }> {}
 
-type UpdateProductInput = components["schemas"]["UpdateProductRequest"] & { id: string };
-type UpdateProductOutput = components["schemas"]["Product"];
+type UpdateProductRequest = InferRequestType<(typeof apiClient.products)[":id"]["$put"]>;
+type UpdateProductInput = UpdateProductRequest["json"] & { id: string };
+type UpdateProductOutput = InferResponseType<(typeof apiClient.products)[":id"]["$put"], 200>;
 
 const putProduct = async ({ id, ...body }: UpdateProductInput) => {
-  const { data, error } = await apiClient.PUT("/products/{id}", {
-    params: { path: { id } },
-    body,
-  });
-  if (error) {
-    throw new UpdateProductError({ cause: error });
+  const res = await apiClient.products[":id"].$put({ param: { id }, json: body });
+  if (res.status !== 200) {
+    throw new UpdateProductError({ cause: await res.json() });
   }
-  return data;
+  return await res.json();
 };
 
 export const useUpdateProduct = () => {

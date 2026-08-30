@@ -3,13 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./app-type": {
+      "types": "./dist-types/src/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "openapi": "tsx scripts/generate-openapi.ts",
     "codegen": "wrangler types",
-    "build": "pnpm openapi && wrangler deploy --dry-run --outdir dist",
-    "typecheck": "pnpm codegen && tsc --noEmit",
+    "build:types": "pnpm codegen && tsc -p tsconfig.build.json",
+    "build": "pnpm build:types && wrangler deploy --dry-run --outdir dist",
+    "typecheck": "pnpm build:types",
     "test": "vitest run --passWithNoTests",
     "test:unit": "vitest run --passWithNoTests",
     "db:generate": "drizzle-kit generate",
@@ -19,23 +24,15 @@
   },
   "dependencies": {
     "@hono/standard-validator": "^0.2.3",
-    "@standard-community/standard-json": "^0.3.5",
-    "@standard-community/standard-openapi": "^0.2.9",
     "@standard-schema/spec": "^1.1.0",
-    "@valibot/to-json-schema": "^1.7.1",
     "better-result": "^3.0.1",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.5",
-    "hono-openapi": "^1.3.1",
-    "quansync": "^0.2.11",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@types/json-schema": "^7.0.15",
     "@types/node": "^26.2.0",
     "drizzle-kit": "^0.31.10",
-    "openapi-types": "^12.1.3",
-    "tsx": "^4.20.6",
     "typescript": "7.0.2",
     "vitest": "4.1.11",
     "wrangler": "^4.127.1"

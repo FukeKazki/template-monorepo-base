@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { delay, http as rawHttp, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { expect, screen, userEvent, within } from "storybook/test";
 import * as v from "valibot";
-import { defaultProducts, http } from "@/lib/msw/handlers";
+import { defaultProducts } from "@/lib/msw/handlers";
 import { ProductIdSchema } from "../../read-model/product-id";
 import { ProductDetail } from "./index";
 
@@ -29,10 +29,10 @@ export const Default: Story = {
 export const Loading: Story = {
   beforeEach({ msw }) {
     msw.use(
-      http.get("/products/{id}", async ({ params, response }) => {
+      http.get("/api/products/:id", async ({ params }) => {
         await delay("infinite");
         const product = defaultProducts.find((product) => product.id === params.id);
-        return response(200).json(product ?? defaultProducts[0]!);
+        return HttpResponse.json(product ?? defaultProducts[0]!);
       }),
     );
   },
@@ -57,9 +57,9 @@ export const NotFound: Story = {
 export const InvalidData: Story = {
   beforeEach({ msw }) {
     msw.use(
-      http.get("/products/{id}", ({ params, response }) => {
+      http.get("/api/products/:id", ({ params }) => {
         const product = defaultProducts.find((product) => product.id === params.id);
-        return response(200).json({ ...(product ?? defaultProducts[0]!), imageUrl: "invalid-url" });
+        return HttpResponse.json({ ...(product ?? defaultProducts[0]!), imageUrl: "invalid-url" });
       }),
     );
   },
@@ -75,7 +75,7 @@ export const InvalidData: Story = {
 export const FetchError: Story = {
   beforeEach({ msw }) {
     msw.use(
-      rawHttp.get("/api/products/:id", () =>
+      http.get("/api/products/:id", () =>
         HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
       ),
     );
@@ -107,7 +107,7 @@ export const Delete: Story = {
 export const DeleteError: Story = {
   beforeEach({ msw }) {
     msw.use(
-      rawHttp.delete("/api/products/:id", () =>
+      http.delete("/api/products/:id", () =>
         HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
       ),
     );

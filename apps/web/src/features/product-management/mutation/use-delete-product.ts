@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/open-api/client";
+import { apiClient } from "@/lib/api/client";
 
 export class DeleteProductError extends TaggedError("DeleteProductError")<{
   cause?: unknown;
@@ -9,11 +9,9 @@ export class DeleteProductError extends TaggedError("DeleteProductError")<{
 type DeleteProductInput = { id: string };
 
 const deleteProduct = async ({ id }: DeleteProductInput) => {
-  const { error } = await apiClient.DELETE("/products/{id}", {
-    params: { path: { id } },
-  });
-  if (error) {
-    throw new DeleteProductError({ cause: error });
+  const res = await apiClient.products[":id"].$delete({ param: { id } });
+  if (res.status !== 204) {
+    throw new DeleteProductError({ cause: await res.json() });
   }
 };
 

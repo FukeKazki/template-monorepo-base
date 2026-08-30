@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [".claude/**", "apm.lock.yaml", "apps/api/openapi.json"]
+  "ignorePatterns": [".claude/**", "apm.lock.yaml"]
 }

@@ -1,21 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/open-api/client";
-import type { components } from "@/lib/open-api/schema.gen";
+import type { InferRequestType, InferResponseType } from "hono/client";
+import { apiClient } from "@/lib/api/client";
 
 export class CreateProductError extends TaggedError("CreateProductError")<{
   cause?: unknown;
 }> {}
 
-type CreateProductInput = components["schemas"]["CreateProductRequest"];
-type CreateProductOutput = components["schemas"]["Product"];
+type CreateProductInput = InferRequestType<typeof apiClient.products.$post>["json"];
+type CreateProductOutput = InferResponseType<typeof apiClient.products.$post, 201>;
 
 const postProduct = async (input: CreateProductInput) => {
-  const { data, error } = await apiClient.POST("/products", { body: input });
-  if (error) {
-    throw new CreateProductError({ cause: error });
+  const res = await apiClient.products.$post({ json: input });
+  if (res.status !== 201) {
+    throw new CreateProductError({ cause: await res.json() });
   }
-  return data;
+  return await res.json();
 };
 
 export const useCreateProduct = () => {
