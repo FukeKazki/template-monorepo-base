@@ -45,6 +45,6 @@ export const ProductIdParamSchema = v.object({
   id: v.pipe(v.string(), v.nonEmpty()),
 });
 
-export type Product = v.InferOutput<typeof ProductSchema>;
-export type CreateProductRequest = v.InferOutput<typeof CreateProductRequestSchema>;
-export type UpdateProductRequest = v.InferOutput<typeof UpdateProductRequestSchema>;
+export type ProductDTO = v.InferOutput<typeof ProductSchema>;
+export type CreateProductRequestDTO = v.InferOutput<typeof CreateProductRequestSchema>;
+export type UpdateProductRequestDTO = v.InferOutput<typeof UpdateProductRequestSchema>;

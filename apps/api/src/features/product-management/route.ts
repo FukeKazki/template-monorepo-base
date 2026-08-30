@@ -1,12 +1,9 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import {
-  createProduct,
-  deleteProduct,
-  findProduct,
-  listProducts,
-  updateProduct,
-} from "./repository";
+import { createProduct } from "./usecase/create-product";
+import { deleteProduct } from "./usecase/delete-product";
+import { getProduct } from "./usecase/get-product";
+import { getProductList } from "./usecase/get-product-list";
 import {
   CreateProductRequestSchema,
   ErrorSchema,
@@ -14,7 +11,8 @@ import {
   ProductListSchema,
   ProductSchema,
   UpdateProductRequestSchema,
-} from "./schema";
+} from "./usecase/schema";
+import { updateProduct } from "./usecase/update-product";
 
 const jsonContent = <T>(schema: T) => ({ "application/json": { schema } }) as const;
 
@@ -44,7 +42,7 @@ export const productRoute = new Hono()
         200: { description: "商品一覧", content: jsonContent(resolver(ProductListSchema)) },
       },
     }),
-    (c) => c.json(listProducts()),
+    (c) => c.json(getProductList()),
   )
   .post(
     "/products",
@@ -73,7 +71,7 @@ export const productRoute = new Hono()
     }),
     validator("param", ProductIdParamSchema),
     (c) => {
-      const product = findProduct(c.req.valid("param").id);
+      const product = getProduct(c.req.valid("param").id);
       if (!product) {
         return c.json({ message: NOT_FOUND_MESSAGE }, 404);
       }

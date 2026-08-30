@@ -37,7 +37,7 @@ pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`�
 
 - `src/index.ts` — Workerのエントリ。`export default app`（Honoの`.fetch`）。CORSを有効化し、feature単位のサブアプリを `app.route("/", ...)` でマウントする。動作確認用に `GET /openapi.json` も生やしている。
 - `src/openapi.ts` — OpenAPIドキュメントのメタ情報（`info` など）。実行時のエンドポイントと生成スクリプトの双方が参照する。
-- `src/features/<feature-name>/` — `schema.ts`（valibotスキーマ）、`route.ts`（Honoのサブアプリ）、`repository.ts`（データアクセス。現状はインメモリ）、`*.spec.ts` の構成。`apps/web` の feature ディレクトリ規約に揃えている。
+- `src/features/<feature-name>/` — `route.ts`（Honoのサブアプリ）、`usecase/`（ユースケース単位に1ファイル。例: `get-product-list.ts`, `create-product.ts`。`domain/` と `repo/` を呼び出し、DTOへの詰め替えを担う。`schema.ts` もここに置く。valibotスキーマとDTO型 `XxxDTO` を定義）、`domain/`（ドメインモデル。関数型・不変オブジェクトで表現する。`FindById`/`Save` のような repo 操作の関数型シグネチャと、`TaggedError`（`better-result`）による `XxxNotFoundError` などのエラー型もここで定義し、`repo/` 側がその型を実装する。DTOには依存しない）、`repo/`（データアクセス。操作単位に1ファイル。例: `findAll.ts`, `save.ts`。`domain/` で定義した関数型シグネチャを実装し、not foundなどはドメインのエラー型を返す。内部の永続化状態は `store.ts` に集約。現状はインメモリ）、`*.spec.ts` の構成。`apps/web` の feature ディレクトリ規約に揃えている。
 - `scripts/generate-openapi.ts` — `hono-openapi` の `generateSpecs()` でスキーマを組み立て `openapi.json` に書き出す。サーバー起動は不要。
 - `wrangler.jsonc` — Cloudflare Workers の設定。`wrangler types` が `worker-configuration.d.ts`（gitignore対象）を生成し、Workersのランタイム型を供給する。`tsconfig.json` では `lib` から `DOM` を外している。
 
