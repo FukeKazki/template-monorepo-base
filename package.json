@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @repo/web dev",
+    "dev:api": "pnpm --filter @repo/api dev",
     "build": "pnpm -r run build",
+    "deploy": "pnpm --filter @repo/api deploy && pnpm --filter @repo/web deploy",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "lint": "oxlint",

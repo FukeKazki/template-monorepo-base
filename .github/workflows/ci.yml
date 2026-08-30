@@ -26,6 +26,11 @@ jobs:
 
       - run: pnpm typecheck
 
-      - run: pnpm --filter @repo/web run test:unit
+      # apps/api の実装から OpenAPI を再生成し、コミット済みの契約とズレていないか検証する
+      - run: pnpm --filter @repo/api run openapi
+
+      - run: git diff --exit-code apps/api/openapi.json
+
+      - run: pnpm -r run test:unit
 
       - run: pnpm build

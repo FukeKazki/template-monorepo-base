@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Cloudflare Workers 環境のため DOM lib は含めない
+    // (ランタイム型は wrangler types が生成する worker-configuration.d.ts が供給する)
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "types": ["node"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src", "scripts", "vitest.config.ts", "worker-configuration.d.ts"]
+}

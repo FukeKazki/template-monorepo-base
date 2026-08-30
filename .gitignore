@@ -19,6 +19,10 @@ storybook-static
 .tanstack
 routeTree.gen.ts
 schema.gen.ts
+# wrangler types の生成物
+worker-configuration.d.ts
+.wrangler/
+*.tsbuildinfo
 
 
 # APM dependencies

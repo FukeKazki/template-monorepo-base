@@ -5,7 +5,8 @@
     "correctness": "error"
   },
   "env": {
-    "browser": true
+    "browser": true,
+    "node": true
   },
   "ignorePatterns": ["dist", "node_modules", "storybook-static"]
 }
