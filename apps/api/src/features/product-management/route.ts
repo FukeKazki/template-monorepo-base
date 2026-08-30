@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
+import { createDb } from "@/lib/db";
+import { createProductRepo } from "./repo";
 import { createProduct } from "./usecase/create-product";
 import { deleteProduct } from "./usecase/delete-product";
 import { getProduct } from "./usecase/get-product";
@@ -32,7 +34,9 @@ const NOT_FOUND_MESSAGE = "商品が見つかりません";
 // 各validatorの第3引数のhookでOpenAPIに載せている Error スキーマの形に揃える。
 const BAD_REQUEST_MESSAGE = "リクエストが不正です";
 
-export const productRoute = new Hono()
+const repoOf = (c: { env: Env }) => createProductRepo(createDb(c.env.DB));
+
+export const productRoute = new Hono<{ Bindings: Env }>()
   .get(
     "/products",
     describeRoute({
@@ -42,7 +46,7 @@ export const productRoute = new Hono()
         200: { description: "商品一覧", content: jsonContent(resolver(ProductListSchema)) },
       },
     }),
-    (c) => c.json(getProductList()),
+    async (c) => c.json(await getProductList(repoOf(c))),
   )
   .post(
     "/products",
@@ -57,7 +61,7 @@ export const productRoute = new Hono()
     validator("json", CreateProductRequestSchema, (result, c) =>
       result.success ? undefined : c.json({ message: BAD_REQUEST_MESSAGE }, 400),
     ),
-    (c) => c.json(createProduct(c.req.valid("json")), 201),
+    async (c) => c.json(await createProduct(repoOf(c), c.req.valid("json")), 201),
   )
   .get(
     "/products/:id",
@@ -70,8 +74,8 @@ export const productRoute = new Hono()
       },
     }),
     validator("param", ProductIdParamSchema),
-    (c) => {
-      const product = getProduct(c.req.valid("param").id);
+    async (c) => {
+      const product = await getProduct(repoOf(c), c.req.valid("param").id);
       if (!product) {
         return c.json({ message: NOT_FOUND_MESSAGE }, 404);
       }
@@ -93,8 +97,8 @@ export const productRoute = new Hono()
     validator("json", UpdateProductRequestSchema, (result, c) =>
       result.success ? undefined : c.json({ message: BAD_REQUEST_MESSAGE }, 400),
     ),
-    (c) => {
-      const product = updateProduct(c.req.valid("param").id, c.req.valid("json"));
+    async (c) => {
+      const product = await updateProduct(repoOf(c), c.req.valid("param").id, c.req.valid("json"));
       if (!product) {
         return c.json({ message: NOT_FOUND_MESSAGE }, 404);
       }
@@ -112,8 +116,8 @@ export const productRoute = new Hono()
       },
     }),
     validator("param", ProductIdParamSchema),
-    (c) => {
-      if (!deleteProduct(c.req.valid("param").id)) {
+    async (c) => {
+      if (!(await deleteProduct(repoOf(c), c.req.valid("param").id))) {
         return c.json({ message: NOT_FOUND_MESSAGE }, 404);
       }
       return c.body(null, 204);

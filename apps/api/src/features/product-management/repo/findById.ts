@@ -1,10 +1,11 @@
+import { eq } from "drizzle-orm";
+import type { Db } from "@/lib/db";
 import { ProductNotFoundError, type FindById } from "../domain/ports";
-import { store } from "./store";
+import { products } from "./table";
 
-export const findById: FindById = (id) => {
-  const product = store.get(id);
-  if (!product) {
-    return new ProductNotFoundError({ cause: "" });
-  }
-  return product;
-};
+export const findById =
+  (db: Db): FindById =>
+  async (id) => {
+    const product = await db.select().from(products).where(eq(products.id, id)).get();
+    return product ?? new ProductNotFoundError({ cause: `product not found: ${id}` });
+  };

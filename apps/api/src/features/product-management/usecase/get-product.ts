@@ -1,9 +1,11 @@
 import type { ProductId } from "../domain/product";
-import { ProductNotFoundError } from "../domain/ports";
-import { findById } from "../repo/findById";
+import { ProductNotFoundError, type ProductRepo } from "../domain/ports";
 import type { ProductDTO } from "./schema";
 
-export const getProduct = (id: string): ProductDTO | undefined => {
-  const result = findById(id as ProductId);
+export const getProduct = async (
+  repo: ProductRepo,
+  id: string,
+): Promise<ProductDTO | undefined> => {
+  const result = await repo.findById(id as ProductId);
   return ProductNotFoundError.is(result) ? undefined : result;
 };

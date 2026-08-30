@@ -1,6 +1,5 @@
 import type { ProductId } from "../domain/product";
-import { ProductNotFoundError } from "../domain/ports";
-import { remove } from "../repo/remove";
+import { ProductNotFoundError, type ProductRepo } from "../domain/ports";
 
-export const deleteProduct = (id: string): boolean =>
-  !ProductNotFoundError.is(remove(id as ProductId));
+export const deleteProduct = async (repo: ProductRepo, id: string): Promise<boolean> =>
+  !ProductNotFoundError.is(await repo.remove(id as ProductId));

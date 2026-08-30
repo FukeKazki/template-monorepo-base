@@ -1,16 +1,15 @@
 import { changeProduct, type ProductId } from "../domain/product";
-import { ProductNotFoundError } from "../domain/ports";
-import { findById } from "../repo/findById";
-import { save } from "../repo/save";
+import { ProductNotFoundError, type ProductRepo } from "../domain/ports";
 import type { ProductDTO, UpdateProductRequestDTO } from "./schema";
 
-export const updateProduct = (
+export const updateProduct = async (
+  repo: ProductRepo,
   id: string,
   input: UpdateProductRequestDTO,
-): ProductDTO | undefined => {
-  const existing = findById(id as ProductId);
+): Promise<ProductDTO | undefined> => {
+  const existing = await repo.findById(id as ProductId);
   if (ProductNotFoundError.is(existing)) return undefined;
   const updated = changeProduct(existing, input);
-  save(updated);
+  await repo.save(updated);
   return updated;
 };

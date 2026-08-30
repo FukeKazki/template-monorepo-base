@@ -1,9 +1,12 @@
 import * as domain from "../domain/product";
-import { save } from "../repo/save";
+import type { ProductRepo } from "../domain/ports";
 import type { CreateProductRequestDTO, ProductDTO } from "./schema";
 
-export const createProduct = (input: CreateProductRequestDTO): ProductDTO => {
+export const createProduct = async (
+  repo: ProductRepo,
+  input: CreateProductRequestDTO,
+): Promise<ProductDTO> => {
   const product = domain.createProduct(input);
-  save(product);
+  await repo.save(product);
   return product;
 };

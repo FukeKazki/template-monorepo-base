@@ -1,4 +1,4 @@
-import { findAll } from "../repo/findAll";
+import type { ProductRepo } from "../domain/ports";
 import type { ProductDTO } from "./schema";
 
-export const getProductList = (): ProductDTO[] => findAll();
+export const getProductList = (repo: ProductRepo): Promise<ProductDTO[]> => repo.findAll();

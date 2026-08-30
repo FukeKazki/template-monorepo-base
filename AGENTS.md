@@ -26,6 +26,9 @@ pnpm deploy                # apps/api → apps/web の順に wrangler deploy（S
 - unitテストのみ実行（CIと同等）: `pnpm -r run test:unit`
 - Storybookの起動: `pnpm --filter @repo/web storybook`（ポート6006）
 - Storybookのビルド: `pnpm --filter @repo/web build-storybook`
+- D1マイグレーションSQLの生成: `pnpm --filter @repo/api db:generate`（`apps/api/src/features/*/repo/table.ts` から `apps/api/drizzle/migrations/` へ。**コミットする**）
+- D1マイグレーションの適用（ローカル）: `pnpm --filter @repo/api db:migrate` / （リモート）: `pnpm --filter @repo/api db:migrate:remote`（`apps/api/wrangler.jsonc` に実際の `database_id` を設定済みであることが前提。後述）
+- D1へのシード投入（ローカルのみ）: `pnpm --filter @repo/api db:seed`
 
 CI（[ci.yml](.github/workflows/ci.yml)）は `lint` → `format:check` → `typecheck` → `openapi`再生成 → `git diff --exit-code apps/api/openapi.json` → `test:unit`（Storybookのplay関数テストは含まない） → `build` の順で実行される。変更後はこの順でローカル確認するとCI通過の見込みが立てやすい。
 
@@ -35,11 +38,14 @@ pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`�
 
 ### apps/api の構造
 
-- `src/index.ts` — Workerのエントリ。`export default app`（Honoの`.fetch`）。CORSを有効化し、feature単位のサブアプリを `app.route("/", ...)` でマウントする。動作確認用に `GET /openapi.json` も生やしている。
+- `src/index.ts` — Workerのエントリ。`export default app`（Honoの`.fetch`）。`new Hono<{ Bindings: Env }>()` で D1 などのバインディング型を通す。CORSを有効化し、feature単位のサブアプリを `app.route("/", ...)` でマウントする。動作確認用に `GET /openapi.json` も生やしている。
 - `src/openapi.ts` — OpenAPIドキュメントのメタ情報（`info` など）。実行時のエンドポイントと生成スクリプトの双方が参照する。
-- `src/features/<feature-name>/` — `route.ts`（Honoのサブアプリ）、`usecase/`（ユースケース単位に1ファイル。例: `get-product-list.ts`, `create-product.ts`。`domain/` と `repo/` を呼び出し、DTOへの詰め替えを担う。`schema.ts` もここに置く。valibotスキーマとDTO型 `XxxDTO` を定義）、`domain/`（ドメインモデル。`product.ts` にエンティティ本体を関数型・不変オブジェクトで表現し、`ports.ts` に `FindById`/`Save` のような repo 操作の関数型シグネチャと `TaggedError`（`better-result`）による `XxxNotFoundError` などのエラー型を定義する。エンティティとport定義をファイルで分離し、`repo/` 側は `ports.ts` の型を実装する。DTOには依存しない）、`repo/`（データアクセス。操作単位に1ファイル。例: `findAll.ts`, `save.ts`。`domain/ports.ts` で定義した関数型シグネチャを実装し、not foundなどはドメインのエラー型を返す。内部の永続化状態は `store.ts` に集約。現状はインメモリ）、`*.spec.ts` の構成。`apps/web` の feature ディレクトリ規約に揃えている。
+- `src/lib/db.ts` — `createDb(d1: D1Database)` で `drizzle-orm/d1` の `Db` インスタンスを組み立てる薄いラッパー。
+- `src/features/<feature-name>/` — `route.ts`（Honoのサブアプリ。`new Hono<{ Bindings: Env }>()`。各ハンドラの冒頭で `createProductRepo(createDb(c.env.DB))` のように repo を組み立てて usecase に渡す composition root）、`usecase/`（ユースケース単位に1ファイル。例: `get-product-list.ts`, `create-product.ts`。第1引数で `ProductRepo` を受け取る async 関数。`domain/` と `repo/` を呼び出し、DTOへの詰め替えを担う。`schema.ts` もここに置く。valibotスキーマとDTO型 `XxxDTO` を定義）、`domain/`（ドメインモデル。`product.ts` にエンティティ本体を関数型・不変オブジェクトで表現し、`ports.ts` に `FindById`/`Save` のような repo 操作の関数型シグネチャ（戻り値は `Promise`）と `ProductRepo` 型、`TaggedError`（`better-result`）による `XxxNotFoundError` などのエラー型を定義する。Cloudflare / Drizzle の型には依存させない）、`repo/`（データアクセス。Drizzle ORM 経由の D1。`table.ts` にテーブル定義（`drizzle-kit` の `schema` glob 対象）、操作単位に1ファイル（`findAll.ts`, `findById.ts`, `save.ts`, `remove.ts`）で `(db: Db) => Port` のファクトリとして実装し、not foundなどはドメインのエラー型を返す。`index.ts` の `createProductRepo(db)` が feature 単位の composition root）の構成。`apps/web` の feature ディレクトリ規約に揃えている。
 - `scripts/generate-openapi.ts` — `hono-openapi` の `generateSpecs()` でスキーマを組み立て `openapi.json` に書き出す。サーバー起動は不要。
-- `wrangler.jsonc` — Cloudflare Workers の設定。`wrangler types` が `worker-configuration.d.ts`（gitignore対象）を生成し、Workersのランタイム型を供給する。`tsconfig.json` では `lib` から `DOM` を外している。
+- `wrangler.jsonc` — Cloudflare Workers の設定。`d1_databases` で D1 バインディング（`binding: "DB"`）を定義する。`database_id` は実際のCloudflare D1データベースのUUIDを**直接コミットする**（UUID自体は秘匿情報ではなく、操作にはCloudflareアカウントの認証情報が別途必要なため）。`wrangler types` が `worker-configuration.d.ts`（gitignore対象）を生成し、`Env.DB: D1Database` を含むWorkersのランタイム型を供給する。`tsconfig.json` では `lib` から `DOM` を外している。
+- `drizzle.config.ts` / `drizzle/migrations/` — `drizzle-kit generate` が `src/features/*/repo/table.ts` から読み取ってマイグレーションSQLを `drizzle/migrations/` に出力する（**コミットする**）。適用は `wrangler d1 migrations apply` 側で行うため `driver: "d1-http"` は付けない（Cloudflare APIトークン不要）。
+- `drizzle/seed.sql` — ローカル開発用の初期データ（`INSERT OR IGNORE`）。マイグレーションには含めず、`db:seed` で別途投入する。リモートには流し込まない。
 
 ### apps/web の構造
 
@@ -74,7 +80,13 @@ pnpm workspaces によるモノレポ。ワークスペース対象は `apps/*`�
 
 ### 実APIに繋いで動かす
 
-デフォルトの `pnpm dev` はMSWのモックを使う。実際の `apps/api` に繋ぐ場合:
+デフォルトの `pnpm dev` はMSWのモックを使う。実際の `apps/api` に繋ぐ場合、初回はローカルD1の初期化が必要:
+
+```bash
+pnpm --filter @repo/api db:generate    # 初回のみ（migrations/0000_*.sql が既にあれば不要）
+pnpm --filter @repo/api db:migrate     # ローカルD1（.wrangler/state 配下）にテーブル作成
+pnpm --filter @repo/api db:seed        # 商品3件を投入
+```
 
 ```bash
 pnpm dev:api                    # ターミナル1: wrangler dev (http://localhost:8787)
@@ -96,6 +108,19 @@ pnpm --filter @repo/web dev:worker   # web worker + api worker (auxiliary) を�
 
 - `/` やクライアントルーティング先の直リンク（例 `/products/xxx`）でSPAフォールバック（`index.html`）が返ること
 - `/api/products` が `apps/api` の `GET /products` に到達すること（`run_worker_first` が効いていない場合、ここでもindex.htmlが返る）
+
+初回のみ、D1データベースの実体をCloudflare上に作成する:
+
+```bash
+pnpm --filter @repo/api exec wrangler d1 create template-monorepo-db
+# 出力された database_id を apps/api/wrangler.jsonc の d1_databases[].database_id に直接書き込む
+```
+
+`database_id` はUUIDでありCloudflareアカウントの認証情報（`wrangler login` の認証情報やAPIトークン）が無ければ操作できないため、`wrangler.jsonc` に直接コミットしてよい（`d1_databases[].database_id` はwranglerがバインディング解決に使う静的な設定値であり、`${VAR}` 展開にもsecrets/vars（`wrangler secret put` など、いずれもWorkerの実行時に `env.XXX` として参照する値専用の仕組み）にも対応しない）。
+
+```bash
+pnpm --filter @repo/api db:migrate:remote   # リモートD1にマイグレーション適用
+```
 
 デプロイ:
 

@@ -7,4 +7,12 @@
   "observability": {
     "enabled": true,
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "template-monorepo-db",
+      "database_id": "4d0761c0-74db-4c8d-93df-d7856a46166c",
+      "migrations_dir": "drizzle/migrations",
+    },
+  ],
 }
