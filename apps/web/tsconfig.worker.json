@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "lib": ["ES2022"], // Workers 環境のため DOM を外す
+    "types": []
+  },
+  "include": ["worker", "worker-configuration.d.ts"]
+}

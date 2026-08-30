@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "codegen": "tsr generate && pnpm dlx openapi-typescript@7.13.0 openapi/schema.yaml -o src/lib/open-api/schema.gen.ts",
-    "build": "pnpm codegen && tsc -b && vite build",
+    "dev:worker": "wrangler dev -c wrangler.jsonc -c ../api/wrangler.jsonc",
+    "codegen": "tsr generate && pnpm dlx openapi-typescript@7.13.0 ../api/openapi.json -o src/lib/open-api/schema.gen.ts && wrangler types",
+    "build": "pnpm codegen && tsc -b tsconfig.json tsconfig.worker.json && vite build",
+    "deploy": "wrangler deploy",
     "preview": "vite preview",
-    "typecheck": "pnpm codegen && tsc -b --noEmit",
+    "typecheck": "pnpm codegen && tsc -b tsconfig.json tsconfig.worker.json --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "storybook": "storybook dev -p 6006",
@@ -60,7 +62,8 @@
     "storybook": "^10.5.10",
     "tailwindcss": "^4.3.3",
     "vite": "8.2.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "wrangler": "^4.127.1"
   },
   "msw": {
     "workerDirectory": [

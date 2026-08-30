@@ -25,6 +25,18 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  server: {
+    // USE_MOCK=false でMSWを止めたときに /api を apps/api のローカルWorkerへ転送する。
+    // apps/api はルート直下 (/products) にエンドポイントを持つため /api を剥がす。
+    // MSW有効時はService Workerがブラウザ側で先に握るのでこのproxyには届かない。
+    proxy: {
+      "/api": {
+        target: process.env["VITE_API_PROXY_TARGET"] ?? "http://localhost:8787",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/api/, ""),
+      },
+    },
+  },
   test: {
     // unit: 純粋なロジック(*.spec.ts等)をNode/jsdomで高速に検証するプロジェクト
     // storybook: Storyをそのままvitestのテストとして実ブラウザ(Chromium)で検証するプロジェクト

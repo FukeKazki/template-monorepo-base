@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "template-monorepo-web",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-08-30",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // これが無いと SPA フォールバックが先に効いて /api/* に index.html が返り、
+    // Worker（= Service Binding への転送）まで到達しない
+    "run_worker_first": ["/api/*"],
+  },
+  "services": [{ "binding": "API", "service": "template-monorepo-api" }],
+  "observability": { "enabled": true },
+}
