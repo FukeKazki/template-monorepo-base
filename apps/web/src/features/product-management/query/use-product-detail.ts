@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@/lib/hono/client";
 import { useResultQuery } from "@/lib/tanstack-query/use-result-query";
 import {
   FetchProductDetailError,

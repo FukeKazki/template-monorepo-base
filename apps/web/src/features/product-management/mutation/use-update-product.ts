@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
 import type { InferRequestType, InferResponseType } from "hono/client";
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@/lib/hono/client";
 
 export class UpdateProductError extends TaggedError("UpdateProductError")<{
   cause?: unknown;

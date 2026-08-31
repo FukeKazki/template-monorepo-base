@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@/lib/hono/client";
 import { constructProductList } from "../read-model/product-list";
 
 export class FetchProductListError extends TaggedError("FetchProductListError")<{

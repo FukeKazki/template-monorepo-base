@@ -1,6 +1,6 @@
 import type { InferResponseType } from "hono/client";
 import { http, HttpResponse } from "msw";
-import type { apiClient } from "@/lib/api/client";
+import type { apiClient } from "@/lib/hono/client";
 
 // レスポンスの形は Hono RPC の型から引く（api側のスキーマを変えるとここが型エラーになる）
 type Product = InferResponseType<(typeof apiClient.products)[":id"]["$get"], 200>;

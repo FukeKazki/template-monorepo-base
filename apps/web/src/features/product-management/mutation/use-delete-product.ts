@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaggedError } from "better-result";
-import { apiClient } from "@/lib/api/client";
+import { apiClient } from "@/lib/hono/client";
 
 export class DeleteProductError extends TaggedError("DeleteProductError")<{
   cause?: unknown;
